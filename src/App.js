@@ -405,7 +405,7 @@ function App() {
     return (
       <div style={{minHeight: '100vh', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
         <div style={{textAlign: 'center', color: 'white'}}>
-          <img src="/logo_esc.png" alt="ESC Cappelle" style={{height: '120px', width: 'auto', marginBottom: '2rem', filter: 'drop-shadow(0 0 20px rgba(255, 136, 0, 0.5))'}} />
+          <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '120px', width: 'auto', marginBottom: '2rem', filter: 'drop-shadow(0 0 20px rgba(255, 136, 0, 0.5))'}} />
           <div style={{fontSize: '3rem', marginBottom: '1rem'}}>⚽</div>
           <p style={{fontSize: '1.5rem', fontWeight: 'bold'}}>Chargement...</p>
         </div>
@@ -418,7 +418,7 @@ function App() {
       <div style={{minHeight: '100vh', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'}}>
         <div style={{background: 'white', borderRadius: '1.5rem', boxShadow: '0 20px 25px -5px rgba(255, 136, 0, 0.5)', padding: '2.5rem', width: '100%', maxWidth: '28rem', border: '2px solid #ff8800'}}>
           <div style={{textAlign: 'center', marginBottom: '2rem'}}>
-            <img src="/logo_esc.png" alt="ESC Cappelle" style={{height: '100px', width: 'auto', marginBottom: '1rem'}} />
+            <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '100px', width: 'auto', marginBottom: '1rem'}} />
             <h1 style={{fontSize: '2rem', fontWeight: '800', color: '#1f2937', marginBottom: '0.5rem'}}>ESC Cappelle</h1>
             <p style={{color: '#ff8800', fontWeight: '600'}}>Équipe Séniors D3 - Équipe B</p>
           </div>
@@ -475,7 +475,7 @@ function App() {
        <div style={{background: '#000000', color: 'white', padding: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', borderBottom: '3px solid #ff8800'}}>
   <div style={{maxWidth: '72rem', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
     <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-      <img src="/logo_esc.png" alt="ESC Cappelle" style={{height: '60px', width: 'auto'}} />
+      <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '60px', width: 'auto'}} />
       <div>
         <h1 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: 0}}>Interface Coach</h1>
         <p style={{margin: 0, color: '#ff8800', fontWeight: '600'}}>ESC Cappelle - {user.nom}</p>
@@ -799,7 +799,7 @@ function App() {
       <div style={{background: '#000000', color: 'white', padding: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', borderBottom: '3px solid #ff8800'}}>
   <div style={{maxWidth: '64rem', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
     <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-      <img src="/logo_esc.png" alt="ESC Cappelle" style={{height: '60px', width: 'auto'}} />
+      <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '60px', width: 'auto'}} />
       <div>
         <h1 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: 0}}>Mon Espace Joueur</h1>
         <p style={{margin: 0, color: '#ff8800', fontWeight: '600'}}>ESC Cappelle - {user.nom}</p>
