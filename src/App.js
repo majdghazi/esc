@@ -139,33 +139,39 @@ function App() {
   const [convocations, setConvocations] = useState([]);
   const [notes, setNotes] = useState([]);
   const [buteurs, setButeurs] = useState([]);
+  const [tempsDeJeu, setTempsDeJeu] = useState([]);
+  const [passesD, setPassesD] = useState([]);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [view, setView] = useState('matchs');
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [noteInputs, setNoteInputs] = useState({});
   const [butInputs, setButInputs] = useState({});
+  const [tempsInputs, setTempsInputs] = useState({});
+  const [passesInputs, setPassesInputs] = useState({});
   const [editingNote, setEditingNote] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const chargerDonnees = async () => {
       setLoading(true);
-      const [joueursData, matchsData, convocsData, notesData, buteursData] = await Promise.all([
+      const [joueursData, matchsData, convocsData, notesData, buteursData, tempsData, passesData] = await Promise.all([
         lireGoogleSheets('Joueurs'),
         lireGoogleSheets('Matchs'),
         lireGoogleSheets('Convocations'),
         lireGoogleSheets('Notes'),
-        lireGoogleSheets('Buteurs')
+        lireGoogleSheets('Buteurs'),
+        lireGoogleSheets('TempsDeJeu'),
+        lireGoogleSheets('PassesD')
       ]);
       
-      // Utilise demo SEULEMENT pour Joueurs et Matchs si vide
       setJoueurs(joueursData.length > 0 ? joueursData : demoJoueurs);
       setMatchs(matchsData.length > 0 ? matchsData : demoMatchs);
-      // Pour le reste, charge ce qui est dans Google Sheets (même si vide)
       setConvocations(convocsData);
       setNotes(notesData);
       setButeurs(buteursData);
+      setTempsDeJeu(tempsData);
+      setPassesD(passesData);
       
       const savedUser = localStorage.getItem('currentUser');
       if (savedUser) {
@@ -198,6 +204,18 @@ function App() {
       ecrireGoogleSheets('Buteurs', buteurs);
     }
   }, [buteurs]);
+
+  useEffect(() => {
+    if (!isInitialLoad.current) {
+      ecrireGoogleSheets('TempsDeJeu', tempsDeJeu);
+    }
+  }, [tempsDeJeu]);
+
+  useEffect(() => {
+    if (!isInitialLoad.current) {
+      ecrireGoogleSheets('PassesD', passesD);
+    }
+  }, [passesD]);
 
   const handleLogin = () => {
     const joueur = joueurs.find(j => j.username === loginUsername && j.password === loginPassword);
@@ -255,6 +273,14 @@ function App() {
     setButInputs({ ...butInputs, [joueurId]: value });
   };
 
+  const handleTempsChange = (joueurId, value) => {
+    setTempsInputs({ ...tempsInputs, [joueurId]: value });
+  };
+
+  const handlePassesChange = (joueurId, value) => {
+    setPassesInputs({ ...passesInputs, [joueurId]: value });
+  };
+
   const saveNote = (joueurId) => {
     const noteValue = noteInputs[joueurId];
     
@@ -292,6 +318,48 @@ function App() {
     }
   };
 
+  const saveTemps = (joueurId) => {
+    const tempsValue = tempsInputs[joueurId];
+    
+    if (tempsValue === '' || tempsValue === null || tempsValue === undefined) {
+      const newTemps = tempsDeJeu.filter(t => !(t.id_match === selectedMatch && t.id_joueur === joueurId));
+      setTempsDeJeu(newTemps);
+      setTempsInputs({ ...tempsInputs, [joueurId]: '' });
+    }
+    else {
+      const temps = parseInt(tempsValue);
+      if (temps >= 0 && temps <= 120) {
+        const newTemps = tempsDeJeu.filter(t => !(t.id_match === selectedMatch && t.id_joueur === joueurId));
+        newTemps.push({ id_match: selectedMatch, id_joueur: joueurId, temps: temps });
+        setTempsDeJeu(newTemps);
+        setTempsInputs({ ...tempsInputs, [joueurId]: '' });
+      } else {
+        alert('Le temps de jeu doit être compris entre 0 et 120 minutes');
+      }
+    }
+  };
+  
+  const savePasses = (joueurId) => {
+    const passesValue = passesInputs[joueurId];
+    
+    if (passesValue === '' || passesValue === null || passesValue === undefined) {
+      const newPasses = passesD.filter(p => !(p.id_match === selectedMatch && p.id_joueur === joueurId));
+      setPassesD(newPasses);
+      setPassesInputs({ ...passesInputs, [joueurId]: '' });
+    }
+    else {
+      const passes = parseInt(passesValue);
+      if (passes >= 0 && passes <= 30) {
+        const newPasses = passesD.filter(p => !(p.id_match === selectedMatch && p.id_joueur === joueurId));
+        newPasses.push({ id_match: selectedMatch, id_joueur: joueurId, passes: passes });
+        setPassesD(newPasses);
+        setPassesInputs({ ...passesInputs, [joueurId]: '' });
+      } else {
+        alert('Le nombre de passes D doit être compris entre 0 et 30');
+      }
+    }
+  };
+
   const isConvoque = (matchId, joueurId) => {
     return convocations.some(c => c.id_match === matchId && c.id_joueur === joueurId && c.convoque);
   };
@@ -306,10 +374,31 @@ function App() {
     return but?.buts || 0;
   };
 
+  const getTemps = (matchId, joueurId) => {
+    const temps = tempsDeJeu.find(t => t.id_match === matchId && t.id_joueur === joueurId);
+    return temps?.temps || 0;
+  };
+  
+  const getPasses = (matchId, joueurId) => {
+    const passes = passesD.find(p => p.id_match === matchId && p.id_joueur === joueurId);
+    return passes?.passes || 0;
+  };
+
   const getTotalButs = (joueurId) => {
     return buteurs
       .filter(b => b.id_joueur === joueurId)
       .reduce((sum, b) => sum + b.buts, 0);
+  };
+  const getTotalTemps = (joueurId) => {
+    return tempsDeJeu
+      .filter(t => t.id_joueur === joueurId)
+      .reduce((sum, t) => sum + t.temps, 0);
+  };
+  
+  const getTotalPasses = (joueurId) => {
+    return passesD
+      .filter(p => p.id_joueur === joueurId)
+      .reduce((sum, p) => sum + p.passes, 0);
   };
 
   if (loading) {
@@ -485,6 +574,8 @@ function App() {
                   const convoque = isConvoque(selectedMatch, joueur.id);
                   const note = getNote(selectedMatch, joueur.id);
                   const buts = getButs(selectedMatch, joueur.id);
+                  const temps = getTemps(selectedMatch, joueur.id);
+                  const passes = getPasses(selectedMatch, joueur.id);
                   const isEditing = editingNote === joueur.id;
                   
                   if (matchEnCours.statut === 'joue' && !convoque) return null;
@@ -517,70 +608,106 @@ function App() {
 
 {matchEnCours.statut === 'joue' && (
   <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap'}}>
-    {!isEditing && (note || buts > 0) ? (
-      <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
-        {buts > 0 && (
-          <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
-            ⚽ {buts} but{buts > 1 ? 's' : ''}
-          </span>
-        )}
-        {note && (
-          <span style={{background: '#ff8800', color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>{note}/10</span>
-        )}
-                              <button
-                                onClick={() => {
-                                  setEditingNote(joueur.id);
-                                  setNoteInputs({ ...noteInputs, [joueur.id]: note });
-                                  setButInputs({ ...butInputs, [joueur.id]: buts || '' });
-                                }}
-                                style={{background: '#6b7280', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem'}}
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                onClick={() => {
-                                  const newNotes = notes.filter(n => !(n.id_match === selectedMatch && n.id_joueur === joueur.id));
-                                  setNotes(newNotes);
-                                  const newButeurs = buteurs.filter(b => !(b.id_match === selectedMatch && b.id_joueur === joueur.id));
-                                  setButeurs(newButeurs);
-                                }}
-                                style={{background: '#dc2626', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem'}}
-                              >
-                                🗑️
-                              </button>
+   {!isEditing && (note || buts > 0 || temps > 0 || passes > 0) ? (
+  <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
+    {note && (
+      <span style={{background: '#ff8800', color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>{note}/10</span>
+    )}
+    {buts > 0 && (
+      <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
+        ⚽ {buts} but{buts > 1 ? 's' : ''}
+      </span>
+    )}
+    {temps > 0 && (
+      <span style={{background: '#f3f4f6', color: '#1f2937', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
+        ⏱️ {temps} min
+      </span>
+    )}
+    {passes > 0 && (
+      <span style={{background: '#dbeafe', color: '#1e40af', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
+        🎯 {passes} passes D
+      </span>
+    )}
+                            <button
+  onClick={() => {
+    setEditingNote(joueur.id);
+    setNoteInputs({ ...noteInputs, [joueur.id]: note });
+    setButInputs({ ...butInputs, [joueur.id]: buts || '' });
+    setTempsInputs({ ...tempsInputs, [joueur.id]: temps || '' });
+    setPassesInputs({ ...passesInputs, [joueur.id]: passes || '' });
+  }}
+  style={{background: '#6b7280', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem'}}
+>
+  ✏️
+</button>
+<button
+  onClick={() => {
+    const newNotes = notes.filter(n => !(n.id_match === selectedMatch && n.id_joueur === joueur.id));
+    setNotes(newNotes);
+    const newButeurs = buteurs.filter(b => !(b.id_match === selectedMatch && b.id_joueur === joueur.id));
+    setButeurs(newButeurs);
+    const newTemps = tempsDeJeu.filter(t => !(t.id_match === selectedMatch && t.id_joueur === joueur.id));
+    setTempsDeJeu(newTemps);
+    const newPasses = passesD.filter(p => !(p.id_match === selectedMatch && p.id_joueur === joueur.id));
+    setPassesD(newPasses);
+  }}
+  style={{background: '#dc2626', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem'}}
+>
+  🗑️
+</button>
                             </div>
-                          ) : (
-                            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
-                              <input
-                                type="number"
-                                min="1"
-                                max="9"
-                                step="0.5"
-                                placeholder="Note"
-                                value={noteInputs[joueur.id] ?? ''}
-                                onChange={(e) => handleNoteChange(joueur.id, e.target.value)}
-                                style={{width: '4.5rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
-                              />
-                              <input
-                                type="number"
-                                min="0"
-                                max="15"
-                                placeholder="Buts"
-                                value={butInputs[joueur.id] ?? ''}
-                                onChange={(e) => handleButsChange(joueur.id, e.target.value)}
-                                style={{width: '4rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
-                              />
-                              <button
-                                onClick={() => {
-                                  saveNote(joueur.id);
-                                  saveButs(joueur.id);
-                                }}
-                                style={{background: '#ff8800', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem'}}
-                              >
-                                OK
-                              </button>
-                            </div>
-                          )}
+                        ) : (
+                          <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                            <input
+                              type="number"
+                              min="1"
+                              max="9"
+                              step="0.5"
+                              placeholder="Note"
+                              value={noteInputs[joueur.id] ?? ''}
+                              onChange={(e) => handleNoteChange(joueur.id, e.target.value)}
+                              style={{width: '4.5rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              max="15"
+                              placeholder="Buts"
+                              value={butInputs[joueur.id] ?? ''}
+                              onChange={(e) => handleButsChange(joueur.id, e.target.value)}
+                              style={{width: '4rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              max="120"
+                              placeholder="Temps"
+                              value={tempsInputs[joueur.id] ?? ''}
+                              onChange={(e) => handleTempsChange(joueur.id, e.target.value)}
+                              style={{width: '5rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              max="30"
+                              placeholder="Passes D"
+                              value={passesInputs[joueur.id] ?? ''}
+                              onChange={(e) => handlePassesChange(joueur.id, e.target.value)}
+                              style={{width: '6rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
+                            />
+                            <button
+                              onClick={() => {
+                                saveNote(joueur.id);
+                                saveButs(joueur.id);
+                                saveTemps(joueur.id);
+                                savePasses(joueur.id);
+                              }}
+                              style={{background: '#ff8800', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem'}}
+                            >
+                              OK
+                            </button>
+                          </div>
+                        )}
                         </div>
                       )}
                     </div>
@@ -599,24 +726,32 @@ function App() {
                   : '-';
                 const nbConvocs = convocations.filter(c => c.id_joueur === joueur.id && c.convoque).length;
                 const totalButs = getTotalButs(joueur.id);
-
+                const totalTemps = getTotalTemps(joueur.id);
+                const totalPasses = getTotalPasses(joueur.id);
+                
                 return (
                   <div key={joueur.id} style={{background: 'white', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'}}>
                     <div style={{marginBottom: '0.75rem'}}>
-                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem'}}>
-                        <div>
-                          <h3 style={{fontWeight: 'bold', fontSize: '1.125rem', color: '#1f2937', margin: 0}}>{joueur.nom}</h3>
-                          <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>@{joueur.username}</p>
+                      <div style={{marginBottom: '0.5rem'}}>
+                        <h3 style={{fontWeight: 'bold', fontSize: '1.125rem', color: '#1f2937', margin: 0}}>{joueur.nom}</h3>
+                        <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>@{joueur.username}</p>
+                      </div>
+                      <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginTop: '0.75rem'}}>
+                        <div style={{textAlign: 'center', background: '#fff7ed', padding: '0.75rem', borderRadius: '0.5rem'}}>
+                          <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Moyenne</p>
+                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{moyenne}</p>
                         </div>
-                        <div style={{display: 'flex', gap: '1.5rem', textAlign: 'center'}}>
-                          <div>
-                            <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Moyenne</p>
-                            <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{moyenne}</p>
-                          </div>
-                          <div>
-                            <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Buts</p>
-                            <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{totalButs}</p>
-                          </div>
+                        <div style={{textAlign: 'center', background: '#fff7ed', padding: '0.75rem', borderRadius: '0.5rem'}}>
+                          <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Buts</p>
+                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{totalButs}</p>
+                        </div>
+                        <div style={{textAlign: 'center', background: '#f3f4f6', padding: '0.75rem', borderRadius: '0.5rem'}}>
+                          <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Temps (min)</p>
+                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{totalTemps}</p>
+                        </div>
+                        <div style={{textAlign: 'center', background: '#dbeafe', padding: '0.75rem', borderRadius: '0.5rem'}}>
+                          <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Passes D</p>
+                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1e40af', margin: 0}}>{totalPasses}</p>
                         </div>
                       </div>
                     </div>
@@ -641,6 +776,8 @@ function App() {
   const mesConvocations = convocations.filter(c => c.id_joueur === user.id && c.convoque);
   const mesNotes = notes.filter(n => n.id_joueur === user.id && n.note);
   const mesButs = getTotalButs(user.id);
+  const monTemps = getTotalTemps(user.id);
+  const mesPasses = getTotalPasses(user.id);
   
   const moyenne = mesNotes.length > 0
     ? (mesNotes.reduce((sum, n) => sum + n.note, 0) / mesNotes.length).toFixed(1)
@@ -696,23 +833,31 @@ function App() {
         <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
           <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Mes statistiques</h2>
           <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '0.75rem', textAlign: 'center'}}>
-            <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Matchs</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{mesNotes.length}</p>
-            </div>
-            <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem'}}>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Moyenne</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{moyenne}</p>
-            </div>
-            <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Convocs</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{mesConvocations.length}</p>
-            </div>
-            <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem'}}>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Buts</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{mesButs}</p>
-            </div>
-          </div>
+  <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
+    <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Matchs</p>
+    <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{mesNotes.length}</p>
+  </div>
+  <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem'}}>
+    <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Moyenne</p>
+    <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{moyenne}</p>
+  </div>
+  <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
+    <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Convocs</p>
+    <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{mesConvocations.length}</p>
+  </div>
+  <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem'}}>
+    <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Buts</p>
+    <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{mesButs}</p>
+  </div>
+  <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
+    <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Temps (min)</p>
+    <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{monTemps}</p>
+  </div>
+  <div style={{background: '#dbeafe', padding: '1rem', borderRadius: '0.5rem'}}>
+    <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Passes D</p>
+    <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1e40af', margin: 0}}>{mesPasses}</p>
+  </div>
+</div>
         </div>
 
         {graphData.length > 0 && (
@@ -732,30 +877,44 @@ function App() {
             </div>
           ) : (
             <div style={{display: 'grid', gap: '0.75rem'}}>
-              {mesNotes.sort((a, b) => b.id_match - a.id_match).map((n, idx) => {
-                const match = matchs.find(m => m.id === n.id_match);
-                const butsDuMatch = getButs(match.id, user.id);
-                return (
-                  <div key={idx} style={{padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
-                      <div>
-                        <p style={{fontWeight: '600', color: '#1f2937', margin: 0}}>{match?.adversaire}</p>
-                        <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>{formaterDate(match?.date)}</p>
-                      </div>
-                      <span style={{background: '#ff8800', color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold'}}>
-                        {n.note}/10
-                      </span>
-                    </div>
-                    {butsDuMatch > 0 && (
-                      <div style={{marginTop: '0.5rem'}}>
-                        <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600'}}>
-                          ⚽ {butsDuMatch} but{butsDuMatch > 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+{mesNotes.sort((a, b) => b.id_match - a.id_match).map((n, idx) => {
+  const match = matchs.find(m => m.id === n.id_match);
+  const butsDuMatch = getButs(match.id, user.id);
+  const tempsDuMatch = getTemps(match.id, user.id);
+  const passesDuMatch = getPasses(match.id, user.id);
+  return (
+    <div key={idx} style={{padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem'}}>
+      <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
+        <div>
+          <p style={{fontWeight: '600', color: '#1f2937', margin: 0}}>{match?.adversaire}</p>
+          <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>{formaterDate(match?.date)}</p>
+        </div>
+        <span style={{background: '#ff8800', color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold'}}>
+          {n.note}/10
+        </span>
+      </div>
+      {(butsDuMatch > 0 || tempsDuMatch > 0 || passesDuMatch > 0) && (
+        <div style={{marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+          {butsDuMatch > 0 && (
+            <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600'}}>
+              ⚽ {butsDuMatch} but{butsDuMatch > 1 ? 's' : ''}
+            </span>
+          )}
+          {tempsDuMatch > 0 && (
+            <span style={{background: '#f3f4f6', color: '#1f2937', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600'}}>
+              ⏱️ {tempsDuMatch} min
+            </span>
+          )}
+          {passesDuMatch > 0 && (
+            <span style={{background: '#dbeafe', color: '#1e40af', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600'}}>
+              🎯 {passesDuMatch} passes D
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+})}
             </div>
           )}
         </div>
