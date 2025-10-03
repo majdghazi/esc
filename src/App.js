@@ -188,34 +188,34 @@ function App() {
   const isInitialLoad = React.useRef(true);
 
   useEffect(() => {
-    if (!isInitialLoad.current && convocations.length > 0) {
+    if (!isInitialLoad.current && user?.role === 'coach' && convocations.length > 0) {
       ecrireGoogleSheets('Convocations', convocations);
     }
-  }, [convocations]);
+  }, [convocations, user]);
   
   useEffect(() => {
-    if (!isInitialLoad.current) {
+    if (!isInitialLoad.current && user?.role === 'coach' && notes.length > 0) {
       ecrireGoogleSheets('Notes', notes);
     }
-  }, [notes]);
+  }, [notes, user]);
   
   useEffect(() => {
-    if (!isInitialLoad.current) {
+    if (!isInitialLoad.current && user?.role === 'coach' && buteurs.length > 0) {
       ecrireGoogleSheets('Buteurs', buteurs);
     }
-  }, [buteurs]);
-
+  }, [buteurs, user]);
+  
   useEffect(() => {
-    if (!isInitialLoad.current) {
+    if (!isInitialLoad.current && user?.role === 'coach' && tempsDeJeu.length > 0) {
       ecrireGoogleSheets('TempsDeJeu', tempsDeJeu);
     }
-  }, [tempsDeJeu]);
-
+  }, [tempsDeJeu, user]);
+  
   useEffect(() => {
-    if (!isInitialLoad.current) {
+    if (!isInitialLoad.current && user?.role === 'coach' && passesD.length > 0) {
       ecrireGoogleSheets('PassesD', passesD);
     }
-  }, [passesD]);
+  }, [passesD, user]);
 
   const handleLogin = () => {
     const joueur = joueurs.find(j => j.username === loginUsername && j.password === loginPassword);
