@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnbaQ2YswMJZD8Mvxe1f25k07hcmsQeX-wHLVBko-O2AiaxJb8dQ6XGnEO6ph8ad6V/exec';
+const SCRIPT_URL = process.env.REACT_APP_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwnbaQ2YswMJZD8Mvxe1f25k07hcmsQeX-wHLVBko-O2AiaxJb8dQ6XGnEO6ph8ad6V/exec';
 
 const lireGoogleSheets = async (onglet) => {
   try {
@@ -187,35 +187,35 @@ function App() {
 
   const isInitialLoad = React.useRef(true);
 
-  useEffect(() => {
-    if (!isInitialLoad.current && user?.role === 'coach' && convocations.length > 0) {
-      ecrireGoogleSheets('Convocations', convocations);
-    }
-  }, [convocations, user]);
-  
-  useEffect(() => {
-    if (!isInitialLoad.current && user?.role === 'coach' && notes.length > 0) {
-      ecrireGoogleSheets('Notes', notes);
-    }
-  }, [notes, user]);
-  
-  useEffect(() => {
-    if (!isInitialLoad.current && user?.role === 'coach' && buteurs.length > 0) {
-      ecrireGoogleSheets('Buteurs', buteurs);
-    }
-  }, [buteurs, user]);
-  
-  useEffect(() => {
-    if (!isInitialLoad.current && user?.role === 'coach' && tempsDeJeu.length > 0) {
-      ecrireGoogleSheets('TempsDeJeu', tempsDeJeu);
-    }
-  }, [tempsDeJeu, user]);
-  
-  useEffect(() => {
-    if (!isInitialLoad.current && user?.role === 'coach' && passesD.length > 0) {
-      ecrireGoogleSheets('PassesD', passesD);
-    }
-  }, [passesD, user]);
+useEffect(() => {
+  if (!isInitialLoad.current && user?.role === 'coach' && convocations.length > 0) {
+    ecrireGoogleSheets('Convocations', convocations);
+  }
+}, [convocations, user]);
+
+useEffect(() => {
+  if (!isInitialLoad.current && user?.role === 'coach' && notes.length > 0) {
+    ecrireGoogleSheets('Notes', notes);
+  }
+}, [notes, user]);
+
+useEffect(() => {
+  if (!isInitialLoad.current && user?.role === 'coach' && buteurs.length > 0) {
+    ecrireGoogleSheets('Buteurs', buteurs);
+  }
+}, [buteurs, user]);
+
+useEffect(() => {
+  if (!isInitialLoad.current && user?.role === 'coach' && tempsDeJeu.length > 0) {
+    ecrireGoogleSheets('TempsDeJeu', tempsDeJeu);
+  }
+}, [tempsDeJeu, user]);
+
+useEffect(() => {
+  if (!isInitialLoad.current && user?.role === 'coach' && passesD.length > 0) {
+    ecrireGoogleSheets('PassesD', passesD);
+  }
+}, [passesD, user]);
 
   const handleLogin = () => {
     const joueur = joueurs.find(j => j.username === loginUsername && j.password === loginPassword);
@@ -238,12 +238,30 @@ function App() {
 
   const convoquerJoueur = (matchId, joueurId) => {
     const newConvocs = [...convocations];
-    newConvocs.push({ id_match: matchId, id_joueur: joueurId, convoque: true });
+    newConvocs.push({ id_match: matchId, id_joueur: joueurId, convoque: true, statut: 'en_attente' });
     setConvocations(newConvocs);
   };
 
   const deconvoquerJoueur = (matchId, joueurId) => {
     const newConvocs = convocations.filter(c => !(c.id_match === matchId && c.id_joueur === joueurId));
+    setConvocations(newConvocs);
+  };
+
+  const accepterConvocation = (matchId, joueurId) => {
+    const newConvocs = convocations.map(c => 
+      c.id_match === matchId && c.id_joueur === joueurId 
+        ? { ...c, statut: 'accepte' }
+        : c
+    );
+    setConvocations(newConvocs);
+  };
+  
+  const refuserConvocation = (matchId, joueurId) => {
+    const newConvocs = convocations.map(c => 
+      c.id_match === matchId && c.id_joueur === joueurId 
+        ? { ...c, statut: 'refuse' }
+        : c
+    );
     setConvocations(newConvocs);
   };
 
@@ -363,6 +381,11 @@ function App() {
   const isConvoque = (matchId, joueurId) => {
     return convocations.some(c => c.id_match === matchId && c.id_joueur === joueurId && c.convoque);
   };
+  
+  const getStatutConvocation = (matchId, joueurId) => {
+    const convoc = convocations.find(c => c.id_match === matchId && c.id_joueur === joueurId && c.convoque);
+    return convoc?.statut || null;
+  };
 
   const getNote = (matchId, joueurId) => {
     const note = notes.find(n => n.id_match === matchId && n.id_joueur === joueurId);
@@ -401,6 +424,40 @@ function App() {
       .reduce((sum, p) => sum + p.passes, 0);
   };
 
+  const getNoteEquipe = (matchId) => {
+    const notesMatch = notes.filter(n => n.id_match === matchId && n.note);
+    if (notesMatch.length === 0) return null;
+    
+    const moyenne = notesMatch.reduce((sum, n) => sum + n.note, 0) / notesMatch.length;
+    return moyenne.toFixed(1);
+  };
+
+  const getNoteGeneraleEquipe = () => {
+    const toutesLesNotes = notes.filter(n => n.note);
+    if (toutesLesNotes.length === 0) return null;
+    
+    const moyenne = toutesLesNotes.reduce((sum, n) => sum + n.note, 0) / toutesLesNotes.length;
+    return moyenne.toFixed(1);
+  };
+  const getCouleurNote = (note) => {
+    if (note >= 7) return { bg: '#10b981', color: 'white', emoji: '🔥' }; // Vert - Excellent
+    if (note >= 5) return { bg: '#f59e0b', color: 'white', emoji: '👍' }; // Orange - Correct
+    return { bg: '#ef4444', color: 'white', emoji: '💪' }; // Rouge - À améliorer
+  };
+  
+  const getCouleurEquipe = (note) => {
+    if (note >= 7) return { bg: 'linear-gradient(90deg, #10b981 0%, #059669 100%)', color: 'white', emoji: '🏆', text: 'Excellente performance !' };
+    if (note >= 5) return { bg: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)', color: 'white', emoji: '⚽', text: 'Performance correcte' };
+    return { bg: 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)', color: 'white', emoji: '💪', text: 'À améliorer ensemble' };
+  };
+  
+  const getTexteNote = (note) => {
+    if (note >= 8) return 'Exceptionnel';
+    if (note >= 7) return 'Très bien';
+    if (note >= 6) return 'Bien';
+    if (note >= 5) return 'Correct';
+    return 'À améliorer';
+  };
   if (loading) {
     return (
       <div style={{minHeight: '100vh', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
@@ -418,7 +475,7 @@ function App() {
       <div style={{minHeight: '100vh', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'}}>
         <div style={{background: 'white', borderRadius: '1.5rem', boxShadow: '0 20px 25px -5px rgba(255, 136, 0, 0.5)', padding: '2.5rem', width: '100%', maxWidth: '28rem', border: '2px solid #ff8800'}}>
           <div style={{textAlign: 'center', marginBottom: '2rem'}}>
-            <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '100px', width: 'auto', marginBottom: '1rem'}} />
+          <img src="/logonoir_IH.png" alt="ESC Cappelle" style={{height: '100px', width: 'auto', marginBottom: '1rem'}} />
             <h1 style={{fontSize: '2rem', fontWeight: '800', color: '#1f2937', marginBottom: '0.5rem'}}>ESC Cappelle</h1>
             <p style={{color: '#ff8800', fontWeight: '600'}}>Équipe Séniors D3 - Équipe B</p>
           </div>
@@ -454,13 +511,7 @@ function App() {
             Se connecter
           </button>
 
-          <div style={{marginTop: '1.5rem', padding: '1rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '0.75rem'}}>
-            <p style={{fontSize: '0.875rem', color: '#9a3412', lineHeight: '1.5'}}>
-              <strong>Mode démo</strong><br/>
-              Coach: Isma / Coach2025<br/>
-              Joueur: Hicham / Cappelle1234
-            </p>
-          </div>
+          
         </div>
       </div>
     );
@@ -477,8 +528,15 @@ function App() {
     <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
       <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '60px', width: 'auto'}} />
       <div>
-        <h1 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: 0}}>Interface Coach</h1>
-        <p style={{margin: 0, color: '#ff8800', fontWeight: '600'}}>ESC Cappelle - {user.nom}</p>
+      <h1 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: 0}}>Interface Coach</h1>
+      <p style={{margin: 0, color: '#ff8800', fontWeight: '600'}}>
+  ESC Cappelle - {user.nom}
+  {getNoteGeneraleEquipe() && (
+    <span style={{marginLeft: '0.5rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteGeneraleEquipe()).bg, color: 'white'}}>
+      {getCouleurEquipe(getNoteGeneraleEquipe()).emoji} Équipe: {getNoteGeneraleEquipe()}/10
+    </span>
+  )}
+</p>
       </div>
     </div>
             <div>
@@ -526,17 +584,23 @@ function App() {
                             {match.statut === 'joue' ? 'JOUÉ' : 'À VENIR'}
                           </span>
                           {match.statut === 'joue' && resultat && (
-                            <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: resultat === 'Victoire' ? '#dcfce7' : resultat === 'Défaite' ? '#fee2e2' : '#f3f4f6', color: resultat === 'Victoire' ? '#166534' : resultat === 'Défaite' ? '#dc2626' : '#6b7280'}}>
-                              {resultat}
-                            </span>
-                          )}
+  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: resultat === 'Victoire' ? '#dcfce7' : resultat === 'Défaite' ? '#fee2e2' : '#f3f4f6', color: resultat === 'Victoire' ? '#166534' : resultat === 'Défaite' ? '#dc2626' : '#6b7280'}}>
+    {resultat}
+  </span>
+)}
+{match.statut === 'joue' && getNoteEquipe(match.id) && (
+  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteEquipe(match.id)).bg, color: 'white'}}>
+  {getCouleurEquipe(getNoteEquipe(match.id)).emoji} Équipe: {getNoteEquipe(match.id)}/10
+</span>
+)}
                           <span style={{fontSize: '0.875rem', color: '#6b7280'}}>{formaterDate(match.date)}</span>
                         </div>
                         <h3 style={{fontWeight: 'bold', fontSize: '1.125rem', color: '#1f2937', margin: 0}}>{match.adversaire}</h3>
                         <p style={{fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem'}}>
-                          {match.domicile === 'true' ? '🏠 Domicile' : '✈️ Extérieur'}
-                          {match.statut === 'joue' && ` • Score: ${match.scoreEquipe} - ${match.scoreAdversaire}`}
-                        </p>
+  {match.domicile === 'true' ? '🏠 Domicile' : '✈️ Extérieur'}
+  {match.statut === 'joue' && ` • Score: ${match.scoreEquipe} - ${match.scoreAdversaire}`}
+ 
+</p>
                       </div>
                       <div style={{fontSize: '1.5rem', color: '#ff8800'}}>→</div>
                     </div>
@@ -559,15 +623,39 @@ function App() {
                   <span style={{color: '#6b7280'}}>{formaterDate(matchEnCours.date)}</span>
                 </div>
                 <h2 style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{matchEnCours.adversaire}</h2>
+                {matchEnCours.statut === 'joue' && getNoteEquipe(matchEnCours.id) && (
+  <div style={{background: getCouleurEquipe(getNoteEquipe(matchEnCours.id)).bg, color: 'white', padding: '1.5rem', borderRadius: '1rem', margin: '1.5rem 0', textAlign: 'center', boxShadow: '0 8px 25px -5px rgba(0, 0, 0, 0.3)'}}>
+    <div style={{fontSize: '1rem', opacity: 0.9, marginBottom: '0.5rem'}}>{getCouleurEquipe(getNoteEquipe(matchEnCours.id)).emoji} {getCouleurEquipe(getNoteEquipe(matchEnCours.id)).text}</div>
+    <div style={{fontSize: '3rem', fontWeight: 'bold', marginBottom: '0.25rem'}}>{getNoteEquipe(matchEnCours.id)}/10</div>
+    <div style={{fontSize: '0.875rem', opacity: 0.8}}>Note moyenne de l'équipe</div>
+  </div>
+)}
                 <p style={{color: '#6b7280', marginTop: '0.25rem'}}>
                   {matchEnCours.domicile === 'true' ? 'Domicile' : 'Extérieur'}
                   {matchEnCours.statut === 'joue' && ` • Score: ${matchEnCours.scoreEquipe} - ${matchEnCours.scoreAdversaire}`}
                 </p>
               </div>
 
-              <h3 style={{fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem'}}>
-                {matchEnCours.statut === 'joue' ? 'Joueurs convoqués' : `Sélection des joueurs (${joueursList.filter(j => isConvoque(selectedMatch, j.id)).length}/${joueursList.length})`}
-              </h3>
+              {matchEnCours.statut === 'avenir' && (
+  <div style={{marginBottom: '1rem'}}>
+    <h3 style={{fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem'}}>Gestion des convocations</h3>
+    <div style={{display: 'flex', gap: '1rem', fontSize: '0.875rem', flexWrap: 'wrap'}}>
+      <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontWeight: '600'}}>
+        ⏳ En attente: {joueursList.filter(j => getStatutConvocation(selectedMatch, j.id) === 'en_attente').length}
+      </span>
+      <span style={{background: '#dcfce7', color: '#166534', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontWeight: '600'}}>
+        ✓ Acceptées: {joueursList.filter(j => getStatutConvocation(selectedMatch, j.id) === 'accepte').length}
+      </span>
+      <span style={{background: '#fee2e2', color: '#dc2626', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontWeight: '600'}}>
+        ✗ Refusées: {joueursList.filter(j => getStatutConvocation(selectedMatch, j.id) === 'refuse').length}
+      </span>
+    </div>
+  </div>
+)}
+
+{matchEnCours.statut === 'joue' && (
+  <h3 style={{fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem'}}>Joueurs convoqués</h3>
+)}
 
               <div style={{display: 'grid', gap: '0.5rem'}}>
                 {joueursList.map(joueur => {
@@ -586,8 +674,9 @@ function App() {
                         <p style={{fontWeight: '600', color: '#1f2937', margin: 0}}>{joueur.nom}</p>
                         <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>@{joueur.username}</p>
                       </div>
+         
                       {matchEnCours.statut === 'avenir' && (
-  <div style={{display: 'flex', gap: '0.5rem'}}>
+  <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
     {!convoque ? (
       <button
         onClick={() => convoquerJoueur(selectedMatch, joueur.id)}
@@ -596,12 +685,29 @@ function App() {
         ✓ Convoquer
       </button>
     ) : (
-      <button
-        onClick={() => deconvoquerJoueur(selectedMatch, joueur.id)}
-        style={{padding: '0.625rem 1.25rem', borderRadius: '0.75rem', border: '2px solid #000000', cursor: 'pointer', background: '#000000', color: 'white', fontWeight: '700', fontSize: '0.875rem', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'}}
-      >
-        ✕ Déconvoquer
-      </button>
+      <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
+        {getStatutConvocation(selectedMatch, joueur.id) === 'en_attente' && (
+          <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: '600', fontSize: '0.875rem'}}>
+            ⏳ En attente
+          </span>
+        )}
+        {getStatutConvocation(selectedMatch, joueur.id) === 'accepte' && (
+          <span style={{background: '#dcfce7', color: '#166534', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: '600', fontSize: '0.875rem'}}>
+            ✓ Acceptée
+          </span>
+        )}
+        {getStatutConvocation(selectedMatch, joueur.id) === 'refuse' && (
+          <span style={{background: '#fee2e2', color: '#dc2626', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: '600', fontSize: '0.875rem'}}>
+            ✗ Refusée
+          </span>
+        )}
+        <button
+          onClick={() => deconvoquerJoueur(selectedMatch, joueur.id)}
+          style={{padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #6b7280', cursor: 'pointer', background: '#6b7280', color: 'white', fontWeight: '600', fontSize: '0.75rem'}}
+        >
+          ✕ Annuler
+        </button>
+      </div>
     )}
   </div>
 )}
@@ -611,7 +717,9 @@ function App() {
    {!isEditing && (note || buts > 0 || temps > 0 || passes > 0) ? (
   <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
     {note && (
-      <span style={{background: '#ff8800', color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>{note}/10</span>
+      <span style={{background: getCouleurNote(note).bg, color: getCouleurNote(note).color, padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
+      {getCouleurNote(note).emoji} {note}/10 • {getTexteNote(note)}
+    </span>
     )}
     {buts > 0 && (
       <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
@@ -739,7 +847,9 @@ function App() {
                       <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginTop: '0.75rem'}}>
                         <div style={{textAlign: 'center', background: '#fff7ed', padding: '0.75rem', borderRadius: '0.5rem'}}>
                           <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Moyenne</p>
-                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{moyenne}</p>
+                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: moyenne !== '-' ? getCouleurNote(parseFloat(moyenne)).bg : '#ff8800', margin: 0}}>
+  {moyenne !== '-' ? `${getCouleurNote(parseFloat(moyenne)).emoji} ${moyenne}` : moyenne}
+</p>
                         </div>
                         <div style={{textAlign: 'center', background: '#fff7ed', padding: '0.75rem', borderRadius: '0.5rem'}}>
                           <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Buts</p>
@@ -783,8 +893,9 @@ function App() {
     ? (mesNotes.reduce((sum, n) => sum + n.note, 0) / mesNotes.length).toFixed(1)
     : '-';
 
-  const prochainMatch = matchs.find(m => m.statut === 'avenir');
-  const suisConvoqueProchainMatch = prochainMatch && mesConvocations.some(c => c.id_match === prochainMatch.id);
+    const prochainMatch = matchs.find(m => m.statut === 'avenir');
+    const convocationProchainMatch = prochainMatch && convocations.find(c => c.id_match === prochainMatch.id && c.id_joueur === user.id && c.convoque);
+    const suisConvoqueProchainMatch = convocationProchainMatch;
 
   const graphData = mesNotes.map(n => {
     const match = matchs.find(m => m.id === n.id_match);
@@ -801,8 +912,15 @@ function App() {
     <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
       <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '60px', width: 'auto'}} />
       <div>
-        <h1 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: 0}}>Mon Espace Joueur</h1>
-        <p style={{margin: 0, color: '#ff8800', fontWeight: '600'}}>ESC Cappelle - {user.nom}</p>
+      <h1 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: 0}}>Mon Espace Joueur</h1>
+      <p style={{margin: 0, color: '#ff8800', fontWeight: '600'}}>
+  ESC Cappelle - {user.nom}
+  {getNoteGeneraleEquipe() && (
+    <span style={{marginLeft: '0.5rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteGeneraleEquipe()).bg, color: 'white'}}>
+      {getCouleurEquipe(getNoteGeneraleEquipe()).emoji} Équipe: {getNoteGeneraleEquipe()}/10
+    </span>
+  )}
+</p>
       </div>
     </div>
           <div>
@@ -817,18 +935,55 @@ function App() {
       </div>
 
       <div style={{maxWidth: '64rem', margin: '1.5rem auto', padding: '0 1rem', paddingBottom: '2rem'}}>
-        {prochainMatch && (
-          <div style={{padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem', background: suisConvoqueProchainMatch ? 'linear-gradient(90deg, #ff8800 0%, #ff6600 100%)' : 'white', color: suisConvoqueProchainMatch ? 'white' : '#1f2937', border: suisConvoqueProchainMatch ? 'none' : '2px solid #e5e7eb'}}>
-            <div style={{fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', opacity: 0.9}}>
-              📅 Prochain match
-            </div>
-            <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem'}}>{prochainMatch.adversaire}</h2>
-            <p style={{marginBottom: '1rem', opacity: 0.9}}>{formaterDate(prochainMatch.date)} - {prochainMatch.domicile === 'true' ? 'Domicile' : 'Extérieur'}</p>
-            <div style={{fontSize: '1.125rem', fontWeight: 'bold'}}>
-              {suisConvoqueProchainMatch ? '✓ Vous êtes convoqué' : '✕ Non convoqué'}
-            </div>
-          </div>
-        )}
+      {prochainMatch && (
+  <div style={{padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem', background: convocationProchainMatch?.statut === 'accepte' ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)' : convocationProchainMatch?.statut === 'refuse' ? 'linear-gradient(90deg, #dc2626 0%, #b91c1c 100%)' : convocationProchainMatch ? 'linear-gradient(90deg, #ff8800 0%, #ff6600 100%)' : 'white', color: convocationProchainMatch ? 'white' : '#1f2937', border: convocationProchainMatch ? 'none' : '2px solid #e5e7eb'}}>
+    <div style={{fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', opacity: 0.9}}>
+      📅 Prochain match
+    </div>
+    <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem'}}>{prochainMatch.adversaire}</h2>
+    <p style={{marginBottom: '1rem', opacity: 0.9}}>{formaterDate(prochainMatch.date)} - {prochainMatch.domicile === 'true' ? 'Domicile' : 'Extérieur'}</p>
+    
+    {!convocationProchainMatch && (
+      <div style={{fontSize: '1.125rem', fontWeight: 'bold'}}>
+        ✕ Non convoqué
+      </div>
+    )}
+    
+    {convocationProchainMatch?.statut === 'en_attente' && (
+      <div>
+        <div style={{fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem'}}>
+          ⏳ Convocation en attente
+        </div>
+        <div style={{display: 'flex', gap: '0.75rem'}}>
+          <button
+            onClick={() => accepterConvocation(prochainMatch.id, user.id)}
+            style={{flex: 1, background: '#10b981', color: 'white', padding: '0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: '600'}}
+          >
+            ✓ Accepter
+          </button>
+          <button
+            onClick={() => refuserConvocation(prochainMatch.id, user.id)}
+            style={{flex: 1, background: '#dc2626', color: 'white', padding: '0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: '600'}}
+          >
+            ✕ Refuser
+          </button>
+        </div>
+      </div>
+    )}
+    
+    {convocationProchainMatch?.statut === 'accepte' && (
+      <div style={{fontSize: '1.125rem', fontWeight: 'bold'}}>
+        ✓ Convocation acceptée
+      </div>
+    )}
+    
+    {convocationProchainMatch?.statut === 'refuse' && (
+      <div style={{fontSize: '1.125rem', fontWeight: 'bold'}}>
+        ✗ Convocation refusée
+      </div>
+    )}
+  </div>
+)}
 
         <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
           <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Mes statistiques</h2>
@@ -839,7 +994,9 @@ function App() {
   </div>
   <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem'}}>
     <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Moyenne</p>
-    <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{moyenne}</p>
+    <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: moyenne !== '-' ? getCouleurNote(parseFloat(moyenne)).bg : '#ff8800', margin: 0}}>
+  {moyenne !== '-' ? `${getCouleurNote(parseFloat(moyenne)).emoji} ${moyenne}` : moyenne}
+</p>
   </div>
   <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
     <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Convocs</p>
@@ -886,12 +1043,24 @@ function App() {
     <div key={idx} style={{padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem'}}>
       <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
         <div>
-          <p style={{fontWeight: '600', color: '#1f2937', margin: 0}}>{match?.adversaire}</p>
-          <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>{formaterDate(match?.date)}</p>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
+  <div>
+    <p style={{fontWeight: '600', color: '#1f2937', margin: 0}}>{match?.adversaire}</p>
+    <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>{formaterDate(match?.date)}</p>
+  </div>
+  <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
+    {match.statut === 'joue' && getNoteEquipe(match.id) && (
+     <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteEquipe(match.id)).bg, color: 'white'}}>
+     {getCouleurEquipe(getNoteEquipe(match.id)).emoji} Équipe: {getNoteEquipe(match.id)}/10
+   </span>
+    )}
+   <span style={{background: getCouleurNote(n.note).bg, color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold'}}>
+  {getCouleurNote(n.note).emoji} {n.note}/10
+</span>
+  </div>
+</div>
         </div>
-        <span style={{background: '#ff8800', color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold'}}>
-          {n.note}/10
-        </span>
+      
       </div>
       {(butsDuMatch > 0 || tempsDuMatch > 0 || passesDuMatch > 0) && (
         <div style={{marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
