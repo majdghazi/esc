@@ -153,6 +153,10 @@ function App() {
   const [editingNote, setEditingNote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionJoueurEnCours, setActionJoueurEnCours] = useState(false);
+  const [showScoreModal, setShowScoreModal] = useState(false);
+const [matchToPlay, setMatchToPlay] = useState(null);
+const [scoreEquipeInput, setScoreEquipeInput] = useState('');
+const [scoreAdversaireInput, setScoreAdversaireInput] = useState('');
 
   useEffect(() => {
     const chargerDonnees = async () => {
@@ -224,6 +228,12 @@ function App() {
       ecrireGoogleSheets('PassesD', passesD);
     }
   }, [passesD, user]);
+
+  useEffect(() => {
+    if (!isInitialLoad.current && user?.role === 'coach' && matchs.length > 0) {
+      ecrireGoogleSheets('Matchs', matchs);
+    }
+  }, [matchs, user]);
 
   const handleLogin = () => {
     const joueur = joueurs.find(j => j.username === loginUsername && j.password === loginPassword);
@@ -391,7 +401,49 @@ function App() {
       }
     }
   };
-
+  const marquerCommeJoue = (matchId) => {
+    console.log('🔴 FONCTION APPELÉE', matchId);
+    const match = matchs.find(m => m.id === matchId);
+    console.log('🔴 MATCH TROUVÉ', match);
+    setMatchToPlay(match);
+    setScoreEquipeInput('');
+    setScoreAdversaireInput('');
+    console.log('🔴 AVANT setShowScoreModal');
+    setShowScoreModal(true);
+    console.log('🔴 APRÈS setShowScoreModal, showScoreModal devrait être true');
+  };
+  
+  const confirmerScoreEtJouer = () => {
+    if (scoreEquipeInput === '' || scoreAdversaireInput === '') {
+      alert('Veuillez saisir les deux scores');
+      return;
+    }
+    
+    const newMatchs = matchs.map(m => 
+      m.id === matchToPlay.id 
+        ? { ...m, statut: 'joue', scoreEquipe: parseInt(scoreEquipeInput), scoreAdversaire: parseInt(scoreAdversaireInput) }
+        : m
+    );
+    setMatchs(newMatchs);
+    setShowScoreModal(false);
+    setMatchToPlay(null);
+  };
+  
+  const repasserEnAttente = (matchId) => {
+    const hasNotes = notes.some(n => n.id_match === matchId);
+    
+    if (hasNotes) {
+      const confirmer = window.confirm('ATTENTION : Ce match a déjà des notes enregistrées. Si vous le repassez en attente, les notes ne seront pas supprimées mais le match redeviendra modifiable. Continuer ?');
+      if (!confirmer) return;
+    }
+    
+    const newMatchs = matchs.map(m => 
+      m.id === matchId 
+        ? { ...m, statut: 'avenir', scoreEquipe: 0, scoreAdversaire: 0 }
+        : m
+    );
+    setMatchs(newMatchs);
+  };
   const isConvoque = (matchId, joueurId) => {
     return convocations.some(c => c.id_match === matchId && c.id_joueur === joueurId && c.convoque);
   };
@@ -537,6 +589,7 @@ function App() {
     const joueursList = joueurs.filter(j => j.role === 'joueur');
 
     return (
+      <>
       <div style={{minHeight: '100vh', background: '#f9fafb'}}>
         <div style={{background: '#000000', color: 'white', padding: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', borderBottom: '3px solid #ff8800'}}>
           <div style={{maxWidth: '72rem', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
@@ -608,7 +661,7 @@ function App() {
                               {getCouleurEquipe(getNoteEquipe(match.id)).emoji} Équipe: {getNoteEquipe(match.id)}/10
                             </span>
                           )}
-                          <span style={{fontSize: '0.875rem', color: '#6b7280'}}>{formaterDate(match.date)}</span>
+                 <span style={{fontSize: '0.875rem', color: '#6b7280'}}>{formaterDate(match.date)}</span>
                         </div>
                         <h3 style={{fontWeight: 'bold', fontSize: '1.125rem', color: '#1f2937', margin: 0}}>{match.adversaire}</h3>
                         <p style={{fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem'}}>
@@ -648,7 +701,25 @@ function App() {
                   {matchEnCours.domicile === 'true' ? 'Domicile' : 'Extérieur'}
                   {matchEnCours.statut === 'joue' && ` • Score: ${matchEnCours.scoreEquipe} - ${matchEnCours.scoreAdversaire}`}
                 </p>
+                {user.role === 'coach' && matchEnCours.statut === 'avenir' && (
+  <button
+    onClick={() => marquerCommeJoue(matchEnCours.id)}
+    style={{marginTop: '1rem', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '600'}}
+  >
+    ✓ Marquer comme joué
+  </button>
+)}
+                {user.role === 'coach' && matchEnCours.statut === 'joue' && (
+  <button
+    onClick={() => repasserEnAttente(matchEnCours.id)}
+    style={{marginTop: '1rem', padding: '0.5rem 1rem', borderRadius: '0.5rem', background: '#6b7280', color: 'white', border: 'none', cursor: 'pointer', fontSize: '0.875rem'}}
+  >
+    ⟲ Repasser en attente
+  </button>
+)}
               </div>
+
+
 
               {matchEnCours.statut === 'avenir' && (
                 <div style={{marginBottom: '1rem'}}>
@@ -841,7 +912,7 @@ function App() {
             </div>
           )}
 
-          {view === 'joueurs' && (
+{view === 'joueurs' && (
             <div style={{display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))'}}>
               {joueursList.map(joueur => {
                 const notesJoueur = notes.filter(n => n.id_joueur === joueur.id && n.note);
@@ -896,8 +967,59 @@ function App() {
           )}
         </div>
       </div>
-    );
-  }
+    
+    
+    {showScoreModal && (
+      <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+        <div style={{background: 'white', borderRadius: '1rem', padding: '2rem', maxWidth: '28rem', width: '90%'}}>
+          <h3 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Match joué - Saisir le score</h3>
+          <p style={{marginBottom: '1.5rem', color: '#6b7280'}}>{matchToPlay?.adversaire}</p>
+          
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem'}}>
+            <div>
+              <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>ESC Cappelle</label>
+              <input
+                type="number"
+                min="0"
+                value={scoreEquipeInput}
+                onChange={(e) => setScoreEquipeInput(e.target.value)}
+                style={{width: '100%', padding: '0.75rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold'}}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>Adversaire</label>
+              <input
+                type="number"
+                min="0"
+                value={scoreAdversaireInput}
+                onChange={(e) => setScoreAdversaireInput(e.target.value)}
+                style={{width: '100%', padding: '0.75rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold'}}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          
+          <div style={{display: 'flex', gap: '0.75rem'}}>
+            <button
+              onClick={() => setShowScoreModal(false)}
+              style={{flex: 1, padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #6b7280', background: 'white', color: '#6b7280', cursor: 'pointer', fontWeight: '600'}}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={confirmerScoreEtJouer}
+              style={{flex: 1, padding: '0.75rem', borderRadius: '0.5rem', background: '#ff8800', color: 'white', border: 'none', cursor: 'pointer', fontWeight: '600'}}
+            >
+              Valider
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
+  );
+}
 
   const mesConvocations = convocations.filter(c => c.id_joueur === user.id && c.convoque);
   const mesNotes = notes.filter(n => n.id_joueur === user.id && n.note);
@@ -921,6 +1043,7 @@ function App() {
   });
 
   return (
+    <>
     <div style={{minHeight: '100vh', background: '#f9fafb'}}>
       <div style={{background: '#000000', color: 'white', padding: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', borderBottom: '3px solid #ff8800'}}>
         <div style={{maxWidth: '64rem', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
@@ -1101,9 +1224,59 @@ function App() {
             </div>
           )}
         </div>
-      </div>
+        </div>
     </div>
-  );
+   
+    {showScoreModal && (
+      <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+        <div style={{background: 'white', borderRadius: '1rem', padding: '2rem', maxWidth: '28rem', width: '90%'}}>
+          <h3 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Match joué - Saisir le score</h3>
+          <p style={{marginBottom: '1.5rem', color: '#6b7280'}}>{matchToPlay?.adversaire}</p>
+          
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem'}}>
+            <div>
+              <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>ESC Cappelle</label>
+              <input
+                type="number"
+                min="0"
+                value={scoreEquipeInput}
+                onChange={(e) => setScoreEquipeInput(e.target.value)}
+                style={{width: '100%', padding: '0.75rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold'}}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>Adversaire</label>
+              <input
+                type="number"
+                min="0"
+                value={scoreAdversaireInput}
+                onChange={(e) => setScoreAdversaireInput(e.target.value)}
+                style={{width: '100%', padding: '0.75rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold'}}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          
+          <div style={{display: 'flex', gap: '0.75rem'}}>
+            <button
+              onClick={() => setShowScoreModal(false)}
+              style={{flex: 1, padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #6b7280', background: 'white', color: '#6b7280', cursor: 'pointer', fontWeight: '600'}}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={confirmerScoreEtJouer}
+              style={{flex: 1, padding: '0.75rem', borderRadius: '0.5rem', background: '#ff8800', color: 'white', border: 'none', cursor: 'pointer', fontWeight: '600'}}
+            >
+              Valider
+            </button>
+          </div>
+        </div>
+      </div>
+)}
+</>
+);
 }
 
 export default App;
