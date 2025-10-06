@@ -508,9 +508,9 @@ const [scoreAdversaireInput, setScoreAdversaireInput] = useState('');
   };
   
   const getCouleurNote = (note) => {
-    if (note >= 7) return { bg: '#10b981', color: 'white', emoji: '🔥' };
-    if (note >= 5) return { bg: '#f59e0b', color: 'white', emoji: '👍' };
-    return { bg: '#ef4444', color: 'white', emoji: '💪' };
+    if (note >= 7) return { bg: 'linear-gradient(90deg, #10b981 0%, #059669 100%)', color: 'white', emoji: '🔥' };
+    if (note >= 5) return { bg: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)', color: 'white', emoji: '👍' };
+    return { bg: 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)', color: 'white', emoji: '💪' };
   };
   
   const getCouleurEquipe = (note) => {
@@ -666,7 +666,7 @@ const [scoreAdversaireInput, setScoreAdversaireInput] = useState('');
                         <h3 style={{fontWeight: 'bold', fontSize: '1.125rem', color: '#1f2937', margin: 0}}>{match.adversaire}</h3>
                         <p style={{fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem'}}>
                           {match.domicile === 'true' ? '🏠 Domicile' : '✈️ Extérieur'}
-                          {match.statut === 'joue' && ` • Score: ${match.scoreEquipe} - ${match.scoreAdversaire}`}
+                          {match.statut === 'joue' && ` • Score: ${match.scoreEquipe || 0} - ${match.scoreAdversaire || 0}`}
                         </p>
                       </div>
                       <div style={{fontSize: '1.5rem', color: '#ff8800'}}>→</div>
@@ -699,7 +699,7 @@ const [scoreAdversaireInput, setScoreAdversaireInput] = useState('');
                 )}
                 <p style={{color: '#6b7280', marginTop: '0.25rem'}}>
                   {matchEnCours.domicile === 'true' ? 'Domicile' : 'Extérieur'}
-                  {matchEnCours.statut === 'joue' && ` • Score: ${matchEnCours.scoreEquipe} - ${matchEnCours.scoreAdversaire}`}
+                  {matchEnCours.statut === 'joue' && ` • Score: ${matchEnCours.scoreEquipe || 0} - ${matchEnCours.scoreAdversaire || 0}`}
                 </p>
                 {user.role === 'coach' && matchEnCours.statut === 'avenir' && (
   <button
@@ -931,6 +931,8 @@ const [scoreAdversaireInput, setScoreAdversaireInput] = useState('');
                         <h3 style={{fontWeight: 'bold', fontSize: '1.125rem', color: '#1f2937', margin: 0}}>{joueur.nom}</h3>
                         <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>@{joueur.username}</p>
                       </div>
+
+                      
                       <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginTop: '0.75rem'}}>
                         <div style={{textAlign: 'center', background: '#fff7ed', padding: '0.75rem', borderRadius: '0.5rem'}}>
                           <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Moyenne</p>
@@ -1125,33 +1127,49 @@ const [scoreAdversaireInput, setScoreAdversaireInput] = useState('');
 
         <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
           <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Mes statistiques</h2>
-          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '0.75rem', textAlign: 'center'}}>
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', textAlign: 'center'}}>
+
+
             <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
+            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>🎮</div>
               <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Matchs</p>
               <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{mesNotes.length}</p>
             </div>
+
+
             <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem'}}>
+            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>⭐</div>
               <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Moyenne</p>
               <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: moyenne !== '-' ? getCouleurNote(parseFloat(moyenne)).bg : '#ff8800', margin: 0}}>
                 {moyenne !== '-' ? `${getCouleurNote(parseFloat(moyenne)).emoji} ${moyenne}` : moyenne}
               </p>
             </div>
+
+
             <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
+            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>📋</div>
               <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Convocs</p>
               <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{mesConvocations.length}</p>
             </div>
+
             <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem'}}>
+            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>⚽</div>
               <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Buts</p>
               <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{mesButs}</p>
             </div>
+
             <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
+            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>⏱️</div>
               <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Temps (min)</p>
               <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{monTemps}</p>
             </div>
+
             <div style={{background: '#dbeafe', padding: '1rem', borderRadius: '0.5rem'}}>
+            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>🎯</div>
               <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Passes D</p>
               <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1e40af', margin: 0}}>{mesPasses}</p>
             </div>
+
           </div>
         </div>
 
@@ -1172,55 +1190,74 @@ const [scoreAdversaireInput, setScoreAdversaireInput] = useState('');
             </div>
           ) : (
             <div style={{display: 'grid', gap: '0.75rem'}}>
-              {mesNotes.sort((a, b) => b.id_match - a.id_match).map((n, idx) => {
-                const match = matchs.find(m => m.id === n.id_match);
-                const butsDuMatch = getButs(match.id, user.id);
-                const tempsDuMatch = getTemps(match.id, user.id);
-                const passesDuMatch = getPasses(match.id, user.id);
-                return (
-                  <div key={idx} style={{padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
-                      <div>
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
-                          <div>
-                            <p style={{fontWeight: '600', color: '#1f2937', margin: 0}}>{match?.adversaire}</p>
-                            <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>{formaterDate(match?.date)}</p>
-                          </div>
-                          <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
-                            {match.statut === 'joue' && getNoteEquipe(match.id) && (
-                              <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteEquipe(match.id)).bg, color: 'white'}}>
-                                {getCouleurEquipe(getNoteEquipe(match.id)).emoji} Équipe: {getNoteEquipe(match.id)}/10
-                              </span>
-                            )}
-                            <span style={{background: getCouleurNote(n.note).bg, color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold'}}>
-                              {getCouleurNote(n.note).emoji} {n.note}/10
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {(butsDuMatch > 0 || tempsDuMatch > 0 || passesDuMatch > 0) && (
-                      <div style={{marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
-                        {butsDuMatch > 0 && (
-                          <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600'}}>
-                            ⚽ {butsDuMatch} but{butsDuMatch > 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {tempsDuMatch > 0 && (
-                          <span style={{background: '#f3f4f6', color: '#1f2937', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600'}}>
-                            ⏱️ {tempsDuMatch} min
-                          </span>
-                        )}
-                        {passesDuMatch > 0 && (
-                          <span style={{background: '#dbeafe', color: '#1e40af', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600'}}>
-                            🎯 {passesDuMatch} passes D
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+             {mesNotes.sort((a, b) => b.id_match - a.id_match).map((n, idx) => {
+  const match = matchs.find(m => m.id === n.id_match);
+  const butsDuMatch = getButs(match.id, user.id);
+  const tempsDuMatch = getTemps(match.id, user.id);
+  const passesDuMatch = getPasses(match.id, user.id);
+  return (
+    <div key={idx} style={{padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem'}}>
+      <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
+        <div>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
+            <div>
+              <p style={{fontWeight: '600', color: '#1f2937', margin: 0}}>{match?.adversaire}</p>
+              <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>
+              {formaterDate(match?.date)} • Score: {match?.scoreEquipe || 0} - {match?.scoreAdversaire || 0}
+              </p>
+            </div>
+            <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.25rem'}}>
+            {match?.scoreEquipe > match?.scoreAdversaire && (
+  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#dcfce7', color: '#166534', minWidth: '85px', textAlign: 'center', display: 'inline-block'}}>
+    ✓ Victoire
+  </span>
+)}
+{match?.scoreEquipe < match?.scoreAdversaire && (
+  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#fee2e2', color: '#dc2626', minWidth: '85px', textAlign: 'center', display: 'inline-block'}}>
+    ✗ Défaite
+  </span>
+)}
+{match?.scoreEquipe === match?.scoreAdversaire && (
+  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#f3f4f6', color: '#6b7280', minWidth: '85px', textAlign: 'center', display: 'inline-block'}}>
+    = Nul
+  </span>
+)}
+</div>
+            <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
+            {match.statut === 'joue' && getNoteEquipe(match.id) && (
+  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteEquipe(match.id)).bg, color: 'white', minWidth: '120px', textAlign: 'center', display: 'inline-block'}}>
+    {getCouleurEquipe(getNoteEquipe(match.id)).emoji} Équipe: {getNoteEquipe(match.id)}/10
+  </span>
+)}
+<span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurNote(n.note).bg, color: 'white', minWidth: '120px', textAlign: 'center', display: 'inline-block'}}>
+  {getCouleurNote(n.note).emoji} Joueur: {n.note}/10
+</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {(butsDuMatch > 0 || tempsDuMatch > 0 || passesDuMatch > 0) && (
+        <div style={{marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+       {butsDuMatch > 0 && (
+  <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600', minWidth: '75px', textAlign: 'center', display: 'inline-block'}}>
+    ⚽ {butsDuMatch} but{butsDuMatch > 1 ? 's' : ''}
+  </span>
+)}
+{tempsDuMatch > 0 && (
+  <span style={{background: '#f3f4f6', color: '#1f2937', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600', minWidth: '75px', textAlign: 'center', display: 'inline-block'}}>
+    ⏱️ {tempsDuMatch} min
+  </span>
+)}
+{passesDuMatch > 0 && (
+  <span style={{background: '#dbeafe', color: '#1e40af', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600', minWidth: '100px', textAlign: 'center', display: 'inline-block'}}>
+    🎯 {passesDuMatch} passes D
+  </span>
+)}
+        </div>
+      )}
+    </div>
+  );
+})}
             </div>
           )}
         </div>
