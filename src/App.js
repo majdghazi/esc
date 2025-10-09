@@ -1,1762 +1,268 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnbaQ2YswMJZD8Mvxe1f25k07hcmsQeX-wHLVBko-O2AiaxJb8dQ6XGnEO6ph8ad6V/exec';
-const lireGoogleSheets = async (onglet) => {
-  try {
-    const response = await fetch(`${SCRIPT_URL}?sheet=${onglet}`);
-    const data = await response.json();
-    return data.error ? [] : data;
-  } catch (error) {
-    console.error(`Erreur lecture ${onglet}:`, error);
-    return [];
-  }
-};
+// Hooks personnalisés
+import useAuth from './hooks/useAuth';
+import useNotification from './hooks/useNotification';
+import useGoogleSheets from './hooks/useGoogleSheets';
+import useMatchManagement from './hooks/useMatchManagement';
+import useEvaluations from './hooks/useEvaluations';
+import usePlayerStats from './hooks/usePlayerStats';
+import useConvocations from './hooks/useConvocations';
+import useNotesJoueurs from './hooks/useNotesJoueurs';
 
-const ecrireGoogleSheets = async (onglet, donnees) => {
-  try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sheet: onglet, data: donnees })
-    });
-  } catch (error) {
-    console.error(`Erreur écriture ${onglet}:`, error);
-  }
-};
+// Composants partagés
+import NotificationToast from './components/Shared/NotificationToast';
+import LoadingScreen from './components/Shared/LoadingScreen';
+import ScoreModal from './components/Shared/ScoreModal';
 
-const formaterDate = (dateStr) => {
-  if (!dateStr) return '';
-  if (dateStr.includes('/')) return dateStr;
-  const date = new Date(dateStr);
-  const jour = String(date.getDate()).padStart(2, '0');
-  const mois = String(date.getMonth() + 1).padStart(2, '0');
-  const annee = date.getFullYear();
-  return `${jour}/${mois}/${annee}`;
-};
+// Composants Auth
+import LoginForm from './components/Auth/LoginForm';
 
-const demoJoueurs = [
-  { id: '1', nom: 'Isma', username: 'Isma', password: 'Coach2025', role: 'coach' },
-  { id: '2', nom: 'Hicham', username: 'Hicham', password: 'Cappelle1234', role: 'joueur' },
-  { id: '3', nom: 'Allan D', username: 'AllanD', password: 'Cappelle5678', role: 'joueur' },
-  { id: '4', nom: 'Allan T', username: 'AllanT', password: 'Cappelle9012', role: 'joueur' },
-  { id: '5', nom: 'Babak', username: 'Babak', password: 'Cappelle3456', role: 'joueur' },
-  { id: '6', nom: 'Ben', username: 'Ben', password: 'Cappelle7890', role: 'joueur' },
-  { id: '7', nom: 'Bob', username: 'Bob', password: 'Cappelle2345', role: 'joueur' },
-  { id: '8', nom: 'Chico', username: 'Chico', password: 'Cappelle6789', role: 'joueur' },
-  { id: '9', nom: 'Christopher', username: 'Christopher', password: 'Cappelle0123', role: 'joueur' },
-  { id: '10', nom: 'Iheb', username: 'Iheb', password: 'Cappelle4567', role: 'joueur' },
-  { id: '11', nom: 'Jason', username: 'Jason', password: 'Cappelle8901', role: 'joueur' },
-  { id: '12', nom: 'Jordan', username: 'Jordan', password: 'Cappelle2346', role: 'joueur' },
-  { id: '13', nom: 'Kevin', username: 'Kevin', password: 'Cappelle6780', role: 'joueur' },
-  { id: '14', nom: 'Lionel', username: 'Lionel', password: 'Cappelle0124', role: 'joueur' },
-  { id: '15', nom: 'Ludovic', username: 'Ludovic', password: 'Cappelle4568', role: 'joueur' },
-  { id: '16', nom: 'Mathis', username: 'Mathis', password: 'Cappelle8902', role: 'joueur' },
-  { id: '17', nom: 'Mohamed', username: 'Mohamed', password: 'Cappelle2347', role: 'joueur' },
-  { id: '18', nom: 'Nolan', username: 'Nolan', password: 'Cappelle6781', role: 'joueur' },
-  { id: '19', nom: 'Pierre', username: 'Pierre', password: 'Cappelle0125', role: 'joueur' },
-  { id: '20', nom: 'Ringo', username: 'Ringo', password: 'Cappelle4569', role: 'joueur' },
-  { id: '21', nom: 'Ryan', username: 'Ryan', password: 'Cappelle8903', role: 'joueur' },
-  { id: '22', nom: 'Sanchez', username: 'Sanchez', password: 'Cappelle2348', role: 'joueur' },
-  { id: '23', nom: 'Thomas', username: 'Thomas', password: 'Cappelle6782', role: 'joueur' },
-  { id: '24', nom: 'Tonio', username: 'Tonio', password: 'Cappelle0126', role: 'joueur' },
-  { id: '25', nom: 'Zak', username: 'Zak', password: 'Cappelle4570', role: 'joueur' },
-  { id: '26', nom: 'AllanG', username: 'AllanG', password: 'Cappelle1177', role: 'joueur' },
-  { id: '27', nom: 'Adam', username: 'Adam', password: 'Cappelle0404', role: 'coach_adjoint' }
-];
+// Composants Coach
+import CoachView from './components/Coach/CoachView';
 
-const demoMatchs = [
-  { id: '1', date: '07/09/2025', adversaire: 'ARMBOUTS CAPPEL US', domicile: 'false', statut: 'joue', scoreEquipe: 5, scoreAdversaire: 1 },
-  { id: '2', date: '21/09/2025', adversaire: 'MONTS DE FLANDRE US 2', domicile: 'true', statut: 'joue', scoreEquipe: 6, scoreAdversaire: 2 },
-  { id: '3', date: '05/10/2025', adversaire: 'DUNKERQUE USL 3', domicile: 'false', statut: 'avenir' },
-  { id: '4', date: '19/10/2025', adversaire: 'WALLON CAPPEL US', domicile: 'true', statut: 'avenir' },
-  { id: '5', date: '02/11/2025', adversaire: 'HAZEBROUCK AS CHTS', domicile: 'false', statut: 'avenir' },
-  { id: '6', date: '09/11/2025', adversaire: 'LEFFRINCKOUCKE US 2', domicile: 'true', statut: 'avenir' },
-  { id: '7', date: '23/11/2025', adversaire: 'BOURBOURG SC 2', domicile: 'false', statut: 'avenir' },
-  { id: '8', date: '07/12/2025', adversaire: 'PONT DE NIEPPE AS', domicile: 'false', statut: 'avenir' },
-  { id: '9', date: '14/12/2025', adversaire: 'STEENE FC', domicile: 'true', statut: 'avenir' },
-  { id: '10', date: '08/02/2026', adversaire: 'STEENE FC', domicile: 'false', statut: 'avenir' },
-  { id: '11', date: '15/02/2026', adversaire: 'ARMBOUTS CAPPEL US', domicile: 'true', statut: 'avenir' },
-  { id: '12', date: '22/02/2026', adversaire: 'MONTS DE FLANDRE US 2', domicile: 'false', statut: 'avenir' },
-  { id: '13', date: '08/03/2026', adversaire: 'DUNKERQUE USL 3', domicile: 'true', statut: 'avenir' },
-  { id: '14', date: '15/03/2026', adversaire: 'WALLON CAPPEL US', domicile: 'false', statut: 'avenir' },
-  { id: '15', date: '12/04/2026', adversaire: 'LEFFRINCKOUCKE US 2', domicile: 'false', statut: 'avenir' },
-  { id: '16', date: '26/04/2026', adversaire: 'PONT DE NIEPPE AS', domicile: 'true', statut: 'avenir' },
-  { id: '17', date: '10/05/2026', adversaire: 'HAZEBROUCK AS CHTS', domicile: 'true', statut: 'avenir' },
-  { id: '18', date: '17/05/2026', adversaire: 'BOURBOURG SC 2', domicile: 'true', statut: 'avenir' }
-];
-
-
-
-const SimpleLineChart = ({ data }) => {
-  if (!data || data.length === 0) return null;
-
-  const width = 600;
-  const height = 250;
-  const padding = 50;
-  const chartWidth = width - 2 * padding;
-  const chartHeight = height - 2 * padding;
-
-  const maxNote = 10;
-  const points = data.map((item, index) => {
-    const x = padding + (index / Math.max(data.length - 1, 1)) * chartWidth;
-    const y = height - padding - (item.note / maxNote) * chartHeight;
-    return { x, y, note: item.note, match: item.match };
-  });
-
-  const pathData = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-
-  return (
-    <svg width="100%" height="250" viewBox={`0 0 ${width} ${height}`} style={{maxWidth: '100%'}}>
-      {[0, 2.5, 5, 7.5, 10].map(val => {
-        const y = height - padding - (val / maxNote) * chartHeight;
-        return (
-          <g key={val}>
-            <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="#e5e7eb" strokeDasharray="3,3" />
-            <text x={padding - 10} y={y + 5} textAnchor="end" fontSize="12" fill="#6b7280">{val}</text>
-          </g>
-        );
-      })}
-
-      <path d={pathData} fill="none" stroke="#ff8800" strokeWidth="3" />
-
-      {points.map((p, i) => (
-        <g key={i}>
-          <circle cx={p.x} cy={p.y} r="5" fill="#ff8800" />
-          <title>{`${p.match}: ${p.note}/10`}</title>
-        </g>
-      ))}
-
-      <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#1f2937" strokeWidth="2" />
-      <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#1f2937" strokeWidth="2" />
-    </svg>
-  );
-};
+// Composants Joueur
+import JoueurView from './components/Joueur/JoueurView';
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [joueurs, setJoueurs] = useState([]);
-  const [matchs, setMatchs] = useState([]);
-  const [convocations, setConvocations] = useState([]);
-  const [notes, setNotes] = useState([]);
-  const [buteurs, setButeurs] = useState([]);
-  const [tempsDeJeu, setTempsDeJeu] = useState([]);
-  const [passesD, setPassesD] = useState([]);
-  const [selectedMatch, setSelectedMatch] = useState(null);
-  const [view, setView] = useState('matchs');
-  const [loginUsername, setLoginUsername] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [noteInputs, setNoteInputs] = useState({});
-  const [butInputs, setButInputs] = useState({});
-  const [tempsInputs, setTempsInputs] = useState({});
-  const [passesInputs, setPassesInputs] = useState({});
-  const [editingNote, setEditingNote] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [actionJoueurEnCours, setActionJoueurEnCours] = useState(false);
-  const [evaluationsCoach, setEvaluationsCoach] = useState([]);
-  const [showScoreModal, setShowScoreModal] = useState(false);
-const [matchToPlay, setMatchToPlay] = useState(null);
-const [scoreEquipeInput, setScoreEquipeInput] = useState('');
-const [scoreAdversaireInput, setScoreAdversaireInput] = useState('');
-const [evalIsma, setEvalIsma] = useState({entrainements: '', coaching: '', relation: ''});
-const [evalAdam, setEvalAdam] = useState({entrainements: '', coaching: '', relation: ''});
-const [notification, setNotification] = useState(null);
+  // Auth
+  const {
+    user,
+    setUser,
+    loginUsername,
+    setLoginUsername,
+    loginPassword,
+    setLoginPassword,
+    handleLogin: performLogin,
+    handleLogout,
+    loadUserFromStorage
+  } = useAuth();
 
-const showNotification = (message, type = 'success') => {
-  setNotification({ message, type });
-  setTimeout(() => setNotification(null), 3000);
-};
+  // Notifications
+  const { notification, showNotification } = useNotification();
 
+  // Google Sheets
+  const {
+    joueurs,
+    matchs,
+    setMatchs,
+    convocations,
+    setConvocations,
+    notes,
+    setNotes,
+    buteurs,
+    setButeurs,
+    tempsDeJeu,
+    setTempsDeJeu,
+    passesD,
+    setPassesD,
+    evaluationsCoach,
+    setEvaluationsCoach,
+    loading,
+    chargerDonnees,
+    actionJoueurEnCours,
+    setActionJoueurEnCours
+  } = useGoogleSheets(user);  // ← AJOUTE (user) ICI !
+
+  // Match Management
+  const {
+    selectedMatch,
+    setSelectedMatch,
+    showScoreModal,
+    setShowScoreModal,
+    matchToPlay,
+    scoreEquipeInput,
+    setScoreEquipeInput,
+    scoreAdversaireInput,
+    setScoreAdversaireInput,
+    marquerCommeJoue,
+    confirmerScoreEtJouer,
+    repasserEnAttente
+  } = useMatchManagement();
+
+  // Evaluations
+  const {
+    evalIsma,
+    setEvalIsma,
+    evalAdam,
+    setEvalAdam,
+    loadEvaluations,
+    saveEvaluationIsma,
+    saveEvaluationAdam
+  } = useEvaluations();
+
+  // Player Stats
+  const {
+    noteInputs,
+    setNoteInputs,
+    butInputs,
+    setButInputs,
+    tempsInputs,
+    setTempsInputs,
+    passesInputs,
+    setPassesInputs,
+    editingNote,
+    setEditingNote,
+    handleNoteChange,
+    handleButsChange,
+    handleTempsChange,
+    handlePassesChange
+  } = usePlayerStats();
+
+  // Convocations
+  const {
+    convoquerJoueur,
+    deconvoquerJoueur,
+    accepterConvocation,
+    refuserConvocation
+  } = useConvocations();
+
+  // Notes Joueurs
+  const {
+    saveNote,
+    saveButs,
+    saveTemps,
+    savePasses
+  } = useNotesJoueurs();
+
+  // Charger les données au démarrage
   useEffect(() => {
-    const chargerDonnees = async () => {
-      setLoading(true);
-      const [joueursData, matchsData, convocsData, notesData, buteursData, tempsData, passesData, evaluationsData] = await Promise.all([ 
-        lireGoogleSheets('Joueurs'),
-        lireGoogleSheets('Matchs'),
-        lireGoogleSheets('Convocations'),
-        lireGoogleSheets('Notes'),
-        lireGoogleSheets('Buteurs'),
-        lireGoogleSheets('TempsDeJeu'),
-        lireGoogleSheets('PassesD'),
-        lireGoogleSheets('EvaluationsCoach')
-      ]);
-      
-      setJoueurs(joueursData.length > 0 ? joueursData : demoJoueurs);
-      setMatchs(matchsData.length > 0 ? matchsData : demoMatchs);
-      setConvocations(convocsData);
-      setNotes(notesData);
-      setButeurs(buteursData);
-      setTempsDeJeu(tempsData);
-      setPassesD(passesData);
-      setEvaluationsCoach(evaluationsData);
-      
-      const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
-      
-      setLoading(false);
-      isInitialLoad.current = false;
-    };
-    
     chargerDonnees();
+    loadUserFromStorage();
   }, []);
 
-  const isInitialLoad = React.useRef(true);
 
+
+  // Charger les évaluations du joueur
   useEffect(() => {
-    if (!isInitialLoad.current && user && convocations.length > 0) {
-      if (user.role === 'coach' || user.role === 'coach_adjoint') {
-        ecrireGoogleSheets('Convocations', convocations);
-      }
-      else if (user.role === 'joueur' && actionJoueurEnCours) {
-        ecrireGoogleSheets('Convocations', convocations);
-        setActionJoueurEnCours(false);
-      }
-    }
-  }, [convocations, user]);
+    loadEvaluations(user, evaluationsCoach);
+  }, [user, evaluationsCoach]);
 
-  useEffect(() => {
-    if (!isInitialLoad.current && user?.role === 'coach' && notes.length > 0) {
-      ecrireGoogleSheets('Notes', notes);
-    }
-  }, [notes, user]);
-
-  useEffect(() => {
-    if (!isInitialLoad.current && (user?.role === 'coach' || user?.role === 'coach_adjoint') && buteurs.length > 0) {
-      ecrireGoogleSheets('Buteurs', buteurs);
-    }
-  }, [buteurs, user]);
-
-  useEffect(() => {
-    if (!isInitialLoad.current && (user?.role === 'coach' || user?.role === 'coach_adjoint') && tempsDeJeu.length > 0) {
-      ecrireGoogleSheets('TempsDeJeu', tempsDeJeu);
-    }
-  }, [tempsDeJeu, user]);
-
-  useEffect(() => {
-    if (!isInitialLoad.current && (user?.role === 'coach' || user?.role === 'coach_adjoint') && passesD.length > 0) {
-      ecrireGoogleSheets('PassesD', passesD);
-    }
-  }, [passesD, user]);
-
-  useEffect(() => {
-    if (!isInitialLoad.current && user?.role === 'coach' && matchs.length > 0) {
-      ecrireGoogleSheets('Matchs', matchs);
-    }
-  }, [matchs, user]);
-
-  useEffect(() => {
-    if (!isInitialLoad.current && user?.role === 'joueur' && evaluationsCoach.length > 0) {
-      ecrireGoogleSheets('EvaluationsCoach', evaluationsCoach);
-    }
-  }, [evaluationsCoach, user]);
-
-// Charger les évaluations existantes du joueur connecté
-useEffect(() => {
-  if (user?.role === 'joueur' && evaluationsCoach.length > 0) {
-    const evalExistanteIsma = evaluationsCoach.find(
-      e => e.id_joueur === user.id && (e.id_coach === '1' || e.id_coach === 1)
-    );
-    
-    if (evalExistanteIsma) {
-      setEvalIsma({
-        entrainements: String(evalExistanteIsma.entrainements || evalExistanteIsma.communication || ''),
-        coaching: String(evalExistanteIsma.coaching || evalExistanteIsma.tactique || ''),
-        relation: String(evalExistanteIsma.relation || evalExistanteIsma.respect || '')
-      });
-    }
-    
-    const evalExistanteAdam = evaluationsCoach.find(
-      e => e.id_joueur === user.id && (e.id_coach === '27' || e.id_coach === 27)
-    );
-    
-    if (evalExistanteAdam) {
-      setEvalAdam({
-        entrainements: String(evalExistanteAdam.entrainements || evalExistanteAdam.communication || ''),
-        coaching: String(evalExistanteAdam.coaching || evalExistanteAdam.tactique || ''),
-        relation: String(evalExistanteAdam.relation || evalExistanteAdam.respect || '')
-      });
-    }
-  }
-}, [user, evaluationsCoach]);
-
+  // Gestion du login
   const handleLogin = () => {
-    const joueur = joueurs.find(j => j.username === loginUsername && j.password === loginPassword);
-    if (joueur) {
-      setUser(joueur);
-      localStorage.setItem('currentUser', JSON.stringify(joueur));
-    } else {
-      showNotification('Identifiants incorrects', 'error');
-    }
+    performLogin(joueurs, showNotification);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('currentUser');
+  // Gestion logout avec reset
+  const logout = () => {
+    handleLogout();
     setSelectedMatch(null);
-    setLoginUsername('');
-    setLoginPassword('');
-    setView('matchs');
   };
 
-  const convoquerJoueur = (matchId, joueurId) => {
-    const newConvocs = [...convocations];
-    newConvocs.push({ id_match: matchId, id_joueur: joueurId, convoque: true, statut: 'en_attente' });
-    setConvocations(newConvocs);
-  };
-
-  const deconvoquerJoueur = (matchId, joueurId) => {
-    const newConvocs = convocations.filter(c => !(c.id_match === matchId && c.id_joueur === joueurId));
-    setConvocations(newConvocs);
-  };
-
-  const accepterConvocation = (matchId, joueurId) => {
-    const newConvocs = convocations.map(c => 
-      c.id_match === matchId && c.id_joueur === joueurId 
-        ? { ...c, statut: 'accepte' }
-        : c
-    );
-    setConvocations(newConvocs);
-    if (user?.role === 'joueur' && user.id === joueurId) {
-      setActionJoueurEnCours(true);
-    }
-  };
-  
-  const refuserConvocation = (matchId, joueurId) => {
-    const newConvocs = convocations.map(c => 
-      c.id_match === matchId && c.id_joueur === joueurId 
-        ? { ...c, statut: 'refuse' }
-        : c
-    );
-    setConvocations(newConvocs);
-    if (user?.role === 'joueur' && user.id === joueurId) {
-      setActionJoueurEnCours(true);
-    }
-  };
-
-  const setNoteJoueur = (matchId, joueurId, noteValue) => {
-    const newNotes = notes.filter(n => !(n.id_match === matchId && n.id_joueur === joueurId));
-    newNotes.push({ id_match: matchId, id_joueur: joueurId, note: parseFloat(noteValue) });
-    setNotes(newNotes);
-    setEditingNote(null);
-  };
-
-  const setButsJoueur = (matchId, joueurId, butsValue) => {
-    const newButeurs = buteurs.filter(b => !(b.id_match === matchId && b.id_joueur === joueurId));
-    if (butsValue !== '' && butsValue !== null && butsValue !== undefined) {
-      const buts = parseInt(butsValue);
-      if (buts >= 0) {
-        newButeurs.push({ id_match: matchId, id_joueur: joueurId, buts: buts });
-      }
-    }
-    setButeurs(newButeurs);
-  };
-
-  const handleNoteChange = (joueurId, value) => {
-    setNoteInputs({ ...noteInputs, [joueurId]: value });
-  };
-
-  const handleButsChange = (joueurId, value) => {
-    setButInputs({ ...butInputs, [joueurId]: value });
-  };
-
-  const handleTempsChange = (joueurId, value) => {
-    setTempsInputs({ ...tempsInputs, [joueurId]: value });
-  };
-
-  const handlePassesChange = (joueurId, value) => {
-    setPassesInputs({ ...passesInputs, [joueurId]: value });
-  };
-
-  const saveNote = (joueurId) => {
-    const noteValue = noteInputs[joueurId];
-    
-    if (noteValue === '' || noteValue === null || noteValue === undefined) {
-      const newNotes = notes.filter(n => !(n.id_match === selectedMatch && n.id_joueur === joueurId));
-      setNotes(newNotes);
-      setEditingNote(null);
-      setNoteInputs({ ...noteInputs, [joueurId]: '' });
-    }
-    else if (noteValue >= 1 && noteValue <= 9) {
-      setNoteJoueur(selectedMatch, joueurId, noteValue);
-      setNoteInputs({ ...noteInputs, [joueurId]: '' });
-    }
-    else {
-      showNotification('La note doit être comprise entre 1 et 9', 'error');
-    }
-  };
-
-  const saveButs = (joueurId) => {
-    const butsValue = butInputs[joueurId];
-    
-    if (butsValue === '' || butsValue === null || butsValue === undefined) {
-      const newButeurs = buteurs.filter(b => !(b.id_match === selectedMatch && b.id_joueur === joueurId));
-      setButeurs(newButeurs);
-      setButInputs({ ...butInputs, [joueurId]: '' });
-    }
-    else {
-      const buts = parseInt(butsValue);
-      if (buts >= 0 && buts <= 15) {
-        setButsJoueur(selectedMatch, joueurId, butsValue);
-        setButInputs({ ...butInputs, [joueurId]: '' });
-      } else {
-        showNotification('Le nombre de buts doit être compris entre 0 et 15', 'error');
-      }
-    }
-  };
-
-  const saveTemps = (joueurId) => {
-    const tempsValue = tempsInputs[joueurId];
-    
-    if (tempsValue === '' || tempsValue === null || tempsValue === undefined) {
-      const newTemps = tempsDeJeu.filter(t => !(t.id_match === selectedMatch && t.id_joueur === joueurId));
-      setTempsDeJeu(newTemps);
-      setTempsInputs({ ...tempsInputs, [joueurId]: '' });
-    }
-    else {
-      const temps = parseInt(tempsValue);
-      if (temps >= 0 && temps <= 120) {
-        const newTemps = tempsDeJeu.filter(t => !(t.id_match === selectedMatch && t.id_joueur === joueurId));
-        newTemps.push({ id_match: selectedMatch, id_joueur: joueurId, temps: temps });
-        setTempsDeJeu(newTemps);
-        setTempsInputs({ ...tempsInputs, [joueurId]: '' });
-      } else {
-        showNotification('Le temps de jeu doit être compris entre 0 et 120 minutes', 'error');
-      }
-    }
-  };
-  
-  const savePasses = (joueurId) => {
-    const passesValue = passesInputs[joueurId];
-    
-    if (passesValue === '' || passesValue === null || passesValue === undefined) {
-      const newPasses = passesD.filter(p => !(p.id_match === selectedMatch && p.id_joueur === joueurId));
-      setPassesD(newPasses);
-      setPassesInputs({ ...passesInputs, [joueurId]: '' });
-    }
-    else {
-      const passes = parseInt(passesValue);
-      if (passes >= 0 && passes <= 30) {
-        const newPasses = passesD.filter(p => !(p.id_match === selectedMatch && p.id_joueur === joueurId));
-        newPasses.push({ id_match: selectedMatch, id_joueur: joueurId, passes: passes });
-        setPassesD(newPasses);
-        setPassesInputs({ ...passesInputs, [joueurId]: '' });
-      } else {
-        showNotification('Le nombre de passes D doit être compris entre 0 et 30', 'error');
-      }
-    }
-  };
-  const marquerCommeJoue = (matchId) => {
-    console.log('🔴 FONCTION APPELÉE', matchId);
-    const match = matchs.find(m => m.id === matchId);
-    console.log('🔴 MATCH TROUVÉ', match);
-    setMatchToPlay(match);
-    setScoreEquipeInput('');
-    setScoreAdversaireInput('');
-    console.log('🔴 AVANT setShowScoreModal');
-    setShowScoreModal(true);
-    console.log('🔴 APRÈS setShowScoreModal, showScoreModal devrait être true');
-  };
-  
-  const confirmerScoreEtJouer = () => {
-    if (scoreEquipeInput === '' || scoreAdversaireInput === '') {
-      showNotification('Veuillez saisir les deux scores', 'error');
-      return;
-    }
-    
-    const newMatchs = matchs.map(m => 
-      m.id === matchToPlay.id 
-        ? { ...m, statut: 'joue', scoreEquipe: parseInt(scoreEquipeInput), scoreAdversaire: parseInt(scoreAdversaireInput) }
-        : m
-    );
-    setMatchs(newMatchs);
-    setShowScoreModal(false);
-    setMatchToPlay(null);
-  };
-  
-  const repasserEnAttente = (matchId) => {
-    const hasNotes = notes.some(n => n.id_match === matchId);
-    
-    if (hasNotes) {
-      const confirmer = window.confirm('ATTENTION : Ce match a déjà des notes enregistrées. Si vous le repassez en attente, les notes ne seront pas supprimées mais le match redeviendra modifiable. Continuer ?');
-      if (!confirmer) return;
-    }
-    
-    const newMatchs = matchs.map(m => 
-      m.id === matchId 
-        ? { ...m, statut: 'avenir', scoreEquipe: 0, scoreAdversaire: 0 }
-        : m
-    );
-    setMatchs(newMatchs);
-  };
-  const isConvoque = (matchId, joueurId) => {
-    return convocations.some(c => c.id_match === matchId && c.id_joueur === joueurId && c.convoque);
-  };
-  
-  const getStatutConvocation = (matchId, joueurId) => {
-    const convoc = convocations.find(c => c.id_match === matchId && c.id_joueur === joueurId && c.convoque);
-    return convoc?.statut || null;
-  };
-
-  const getNote = (matchId, joueurId) => {
-    const note = notes.find(n => n.id_match === matchId && n.id_joueur === joueurId);
-    return note?.note;
-  };
-
-  const getButs = (matchId, joueurId) => {
-    const but = buteurs.find(b => b.id_match === matchId && b.id_joueur === joueurId);
-    return but?.buts || 0;
-  };
-
-  const getTemps = (matchId, joueurId) => {
-    const temps = tempsDeJeu.find(t => t.id_match === matchId && t.id_joueur === joueurId);
-    return temps?.temps || 0;
-  };
-  
-  const getPasses = (matchId, joueurId) => {
-    const passes = passesD.find(p => p.id_match === matchId && p.id_joueur === joueurId);
-    return passes?.passes || 0;
-  };
-
-  const getTotalButs = (joueurId) => {
-    return buteurs
-      .filter(b => b.id_joueur === joueurId)
-      .reduce((sum, b) => sum + b.buts, 0);
-  };
-  
-  const getTotalTemps = (joueurId) => {
-    return tempsDeJeu
-      .filter(t => t.id_joueur === joueurId)
-      .reduce((sum, t) => sum + t.temps, 0);
-  };
-  
-  const getTotalPasses = (joueurId) => {
-    return passesD
-      .filter(p => p.id_joueur === joueurId)
-      .reduce((sum, p) => sum + p.passes, 0);
-  };
-
-  const getNoteEquipe = (matchId) => {
-    const notesMatch = notes.filter(n => n.id_match === matchId && n.note);
-    if (notesMatch.length === 0) return null;
-    
-    const moyenne = notesMatch.reduce((sum, n) => sum + n.note, 0) / notesMatch.length;
-    return moyenne.toFixed(1);
-  };
-
-  const getNoteGeneraleEquipe = () => {
-    const toutesLesNotes = notes.filter(n => n.note);
-    if (toutesLesNotes.length === 0) return null;
-    
-    const moyenne = toutesLesNotes.reduce((sum, n) => sum + n.note, 0) / toutesLesNotes.length;
-    return moyenne.toFixed(1);
-  };
-
-  const saveEvaluationIsma = () => {
-    const newEvaluations = evaluationsCoach.filter(e => !(e.id_joueur === user.id && (e.id_coach === '1' || e.id_coach === 1)));
-    const moyenneCalculee = calculerMoyenne(evalIsma);
-    
-    if (moyenneCalculee) {
-      newEvaluations.push({
-        id: Date.now().toString(),
-        id_joueur: user.id,
-        id_coach: 1,
-        entrainements: parseFloat(evalIsma.entrainements) || 0,
-        coaching: parseFloat(evalIsma.coaching) || 0,
-        relation: parseFloat(evalIsma.relation) || 0,
-        note_globale: parseFloat(moyenneCalculee),
-        derniere_modification: new Date().toISOString()
-      });
-      
-      setEvaluationsCoach(newEvaluations);
-      showNotification('Évaluation d\'Isma sauvegardée !', 'success');
-    }
-  };
-  
-  const saveEvaluationAdam = () => {
-    const newEvaluations = evaluationsCoach.filter(e => !(e.id_joueur === user.id && (e.id_coach === '27' || e.id_coach === 27)));
-    const moyenneCalculee = calculerMoyenne(evalAdam);
-    if (moyenneCalculee) {
-      newEvaluations.push({
-        id: Date.now().toString(),
-        id_joueur: user.id,
-        id_coach: 27,
-        entrainements: parseFloat(evalAdam.entrainements) || 0,
-        coaching: parseFloat(evalAdam.coaching) || 0,
-        relation: parseFloat(evalAdam.relation) || 0,
-        note_globale: parseFloat(moyenneCalculee),
-        derniere_modification: new Date().toISOString()
-      });
-      setEvaluationsCoach(newEvaluations);
-      showNotification('Évaluation d\'Adam sauvegardée !', 'success');
-    }
-  };
-  
-  const getCouleurNote = (note) => {
-    if (note >= 7) return { bg: 'linear-gradient(90deg, #10b981 0%, #059669 100%)', color: 'white', emoji: '🔥' };
-    if (note >= 5) return { bg: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)', color: 'white', emoji: '👍' };
-    return { bg: 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)', color: 'white', emoji: '💪' };
-  };
-  
-  const getCouleurEquipe = (note) => {
-    if (note >= 7) return { bg: 'linear-gradient(90deg, #10b981 0%, #059669 100%)', color: 'white', emoji: '🏆', text: 'Excellente performance !' };
-    if (note >= 5) return { bg: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)', color: 'white', emoji: '⚽', text: 'Performance correcte' };
-    return { bg: 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)', color: 'white', emoji: '💪', text: 'À améliorer ensemble' };
-  };
-  
-  const getTexteNote = (note) => {
-    if (note >= 8) return 'Exceptionnel';
-    if (note >= 7) return 'Très bien';
-    if (note >= 6) return 'Bien';
-    if (note >= 5) return 'Correct';
-    return 'À améliorer';
-  };
-  const calculerMoyenne = (evaluation) => {
-    const notes = [evaluation.entrainements, evaluation.coaching, evaluation.relation].filter(n => n !== '' && !isNaN(n));
-    if (notes.length === 0) return '';
-    const moyenne = notes.reduce((sum, note) => sum + parseFloat(note), 0) / notes.length;
-    return moyenne.toFixed(2);
-  };
-
-  const getCouleurEvaluation = (note) => {
-    if (note >= 8) return { 
-      bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-      color: 'white', 
-      emoji: '🔥',
-      text: 'Excellent',
-      border: '#059669'
-    };
-    if (note >= 6.5) return { 
-      bg: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', 
-      color: 'white', 
-      emoji: '⭐',
-      text: 'Très bien',
-      border: '#2563eb'
-    };
-    if (note >= 5) return { 
-      bg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
-      color: 'white', 
-      emoji: '👍',
-      text: 'Bien',
-      border: '#d97706'
-    };
-    return { 
-      bg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', 
-      color: 'white', 
-      emoji: '💪',
-      text: 'À améliorer',
-      border: '#dc2626'
-    };
-  };
-
-  const NotificationToast = ({ message, type, onClose }) => {
-    const colors = {
-      success: { bg: '#10b981', icon: '✓' },
-      error: { bg: '#ef4444', icon: '✕' },
-      info: { bg: '#ff8800', icon: 'ℹ' }
-    };
-    
-    return (
-      <div style={{
-        position: 'fixed',
-        top: '2rem',
-        right: '2rem',
-        zIndex: 9999,
-        background: colors[type].bg,
-        color: 'white',
-        padding: '1rem 1.5rem',
-        borderRadius: '0.75rem',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-        minWidth: '300px',
-        animation: 'slideIn 0.3s ease-out'
-      }}>
-        <style>{`
-          @keyframes slideIn {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-          }
-        `}</style>
-        <div style={{fontSize: '1.5rem', fontWeight: 'bold'}}>{colors[type].icon}</div>
-        <div style={{flex: 1, fontWeight: '600'}}>{message}</div>
-        <button 
-          onClick={onClose}
-          style={{
-            background: 'rgba(255,255,255,0.2)',
-            border: 'none',
-            color: 'white',
-            borderRadius: '50%',
-            width: '24px',
-            height: '24px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          ×
-        </button>
-      </div>
-    );
-  };
-  
+  // Loading screen
   if (loading) {
     return (
       <>
-      {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-      <div style={{minHeight: '100vh', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-        <div style={{textAlign: 'center', color: 'white'}}>
-          <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '120px', width: 'auto', marginBottom: '2rem', filter: 'drop-shadow(0 0 20px rgba(255, 136, 0, 0.5))'}} />
-          <div style={{fontSize: '3rem', marginBottom: '1rem'}}>⚽</div>
-          <p style={{fontSize: '1.5rem', fontWeight: 'bold'}}>Chargement...</p>
-        </div>
-      </div>
+        {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => showNotification(null)} />}
+        <LoadingScreen />
       </>
     );
   }
 
-
-  
+  // Login screen
   if (!user) {
     return (
       <>
-      {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-      <div style={{minHeight: '100vh', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'}}>
-        <div style={{background: 'white', borderRadius: '1.5rem', boxShadow: '0 20px 25px -5px rgba(255, 136, 0, 0.5)', padding: '2.5rem', width: '100%', maxWidth: '28rem', border: '2px solid #ff8800'}}>
-          <div style={{textAlign: 'center', marginBottom: '2rem'}}>
-            <img src="/logonoir_IH.png" alt="ESC Cappelle" style={{height: '100px', width: 'auto', marginBottom: '1rem'}} />
-            <h1 style={{fontSize: '2rem', fontWeight: '800', color: '#1f2937', marginBottom: '0.5rem'}}>ESC Cappelle</h1>
-            <p style={{color: '#ff8800', fontWeight: '600'}}>Équipe Séniors D3 - Équipe B</p>
-          </div>
-  
-          <div style={{marginBottom: '1rem'}}>
-            <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>Identifiant</label>
-            <input
-              type="text"
-              value={loginUsername}
-              onChange={(e) => setLoginUsername(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-              style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #e5e7eb', borderRadius: '0.75rem', fontSize: '1rem'}}
-              placeholder="Votre pseudo"
-            />
-          </div>
-
-          <div style={{marginBottom: '1.5rem'}}>
-            <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>Mot de passe</label>
-            <input
-              type="password"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-              style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #e5e7eb', borderRadius: '0.75rem', fontSize: '1rem'}}
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            onClick={handleLogin}
-            style={{width: '100%', background: '#ff8800', color: 'white', padding: '0.875rem', borderRadius: '0.75rem', fontWeight: '700', border: 'none', cursor: 'pointer', fontSize: '1rem'}}
-          >
-            Se connecter
-          </button>
-        </div>
-      </div>
+        {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => showNotification(null)} />}
+        <LoginForm
+          loginUsername={loginUsername}
+          setLoginUsername={setLoginUsername}
+          loginPassword={loginPassword}
+          setLoginPassword={setLoginPassword}
+          onLogin={handleLogin}
+        />
       </>
     );
   }
 
+  // Coach/Coach Adjoint View
   if (user.role === 'coach' || user.role === 'coach_adjoint') {
-    const matchEnCours = matchs.find(m => m.id === selectedMatch);
-    const joueursList = joueurs.filter(j => j.role === 'joueur');
-
     return (
       <>
-      {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-      <div style={{minHeight: '100vh', background: '#f9fafb'}}>
-        <div style={{background: '#000000', color: 'white', padding: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', borderBottom: '3px solid #ff8800'}}>
-          <div style={{maxWidth: '72rem', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-              <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '60px', width: 'auto'}} />
-              <div>
-                <h1 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: 0}}>Interface Coach</h1>
-                <p style={{margin: 0, color: '#ff8800', fontWeight: '600'}}>
-                  ESC Cappelle - {user.nom}
-                  {getNoteGeneraleEquipe() && (
-                    <span style={{marginLeft: '0.5rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteGeneraleEquipe()).bg, color: 'white'}}>
-                      {getCouleurEquipe(getNoteGeneraleEquipe()).emoji} Équipe: {getNoteGeneraleEquipe()}/10
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
-            <div>
-              <button onClick={() => window.location.reload()} style={{background: '#6b7280', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', color: 'white', cursor: 'pointer', fontWeight: '600', marginRight: '0.5rem'}}>
-                Actualiser
-              </button>
-              <button onClick={handleLogout} style={{background: '#ff8800', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', color: 'white', cursor: 'pointer', fontWeight: '600'}}>
-                Déconnexion
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div style={{maxWidth: '72rem', margin: '1.5rem auto', padding: '0 1rem', paddingBottom: '2rem'}}>
-          {!selectedMatch && (
-            <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap'}}>
-              <button
-                onClick={() => setView('matchs')}
-                style={{flex: '1 1 200px', padding: '0.75rem', borderRadius: '0.75rem', fontWeight: '600', border: 'none', cursor: 'pointer', background: view === 'matchs' ? '#ff8800' : 'white', color: view === 'matchs' ? 'white' : '#1f2937', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'}}
-              >
-                📅 Matchs ({matchs.length})
-              </button>
-              <button
-                onClick={() => setView('joueurs')}
-                style={{flex: '1 1 200px', padding: '0.75rem', borderRadius: '0.75rem', fontWeight: '600', border: 'none', cursor: 'pointer', background: view === 'joueurs' ? '#ff8800' : 'white', color: view === 'joueurs' ? 'white' : '#1f2937', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'}}
-              >
-                👥 Joueurs ({joueursList.length})
-              </button>
-
-              <button
-  onClick={() => setView('evaluations')}
-  style={{flex: '1 1 200px', padding: '0.75rem', borderRadius: '0.75rem', fontWeight: '600', border: 'none', cursor: 'pointer', background: view === 'evaluations' ? '#ff8800' : 'white', color: view === 'evaluations' ? 'white' : '#1f2937', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'}}
->
-  ⭐ Mes évaluations
-</button>
-            </div>
-          )}
-
-          {view === 'matchs' && !selectedMatch && (
-            <div style={{display: 'grid', gap: '1rem'}}>
-              {matchs.map(match => {
-                const resultat = match.statut === 'joue' ? 
-                  (match.scoreEquipe > match.scoreAdversaire ? 'Victoire' : 
-                   match.scoreEquipe < match.scoreAdversaire ? 'Défaite' : 'Nul') : null;
-
-                return (
-                  <div key={match.id} onClick={() => setSelectedMatch(match.id)} style={{background: 'white', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', cursor: 'pointer'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                      <div style={{flex: 1}}>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap'}}>
-                          <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: match.statut === 'joue' ? '#1f2937' : '#fff7ed', color: match.statut === 'joue' ? 'white' : '#ff8800'}}>
-                            {match.statut === 'joue' ? 'JOUÉ' : 'À VENIR'}
-                          </span>
-                          {match.statut === 'joue' && resultat && (
-                            <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: resultat === 'Victoire' ? '#dcfce7' : resultat === 'Défaite' ? '#fee2e2' : '#f3f4f6', color: resultat === 'Victoire' ? '#166534' : resultat === 'Défaite' ? '#dc2626' : '#6b7280'}}>
-                              {resultat}
-                            </span>
-                          )}
-                          {match.statut === 'joue' && getNoteEquipe(match.id) && (
-                            <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteEquipe(match.id)).bg, color: 'white'}}>
-                              {getCouleurEquipe(getNoteEquipe(match.id)).emoji} Équipe: {getNoteEquipe(match.id)}/10
-                            </span>
-                          )}
-                 <span style={{fontSize: '0.875rem', color: '#6b7280'}}>{formaterDate(match.date)}</span>
-                        </div>
-                        <h3 style={{fontWeight: 'bold', fontSize: '1.125rem', color: '#1f2937', margin: 0}}>{match.adversaire}</h3>
-                        <p style={{fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem'}}>
-                          {match.domicile === 'true' ? '🏠 Domicile' : '✈️ Extérieur'}
-                          {match.statut === 'joue' && ` • Score: ${match.scoreEquipe || 0} - ${match.scoreAdversaire || 0}`}
-                        </p>
-                      </div>
-                      <div style={{fontSize: '1.5rem', color: '#ff8800'}}>→</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {view === 'matchs' && selectedMatch && matchEnCours && (
-            <div style={{background: 'white', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', padding: '1.5rem'}}>
-              <button onClick={() => setSelectedMatch(null)} style={{marginBottom: '1rem', color: '#ff8800', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem'}}>
-                ← Retour aux matchs
-              </button>
-              <div style={{marginBottom: '1.5rem'}}>
-                <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap'}}>
-                  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: matchEnCours.statut === 'joue' ? '#1f2937' : '#fff7ed', color: matchEnCours.statut === 'joue' ? 'white' : '#ff8800'}}>
-                    {matchEnCours.statut === 'joue' ? 'JOUÉ' : 'À VENIR'}
-                  </span>
-                  <span style={{color: '#6b7280'}}>{formaterDate(matchEnCours.date)}</span>
-                </div>
-                <h2 style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{matchEnCours.adversaire}</h2>
-                {matchEnCours.statut === 'joue' && getNoteEquipe(matchEnCours.id) && (
-                  <div style={{background: getCouleurEquipe(getNoteEquipe(matchEnCours.id)).bg, color: 'white', padding: '1.5rem', borderRadius: '1rem', margin: '1.5rem 0', textAlign: 'center', boxShadow: '0 8px 25px -5px rgba(0, 0, 0, 0.3)'}}>
-                    <div style={{fontSize: '1rem', opacity: 0.9, marginBottom: '0.5rem'}}>{getCouleurEquipe(getNoteEquipe(matchEnCours.id)).emoji} {getCouleurEquipe(getNoteEquipe(matchEnCours.id)).text}</div>
-                    <div style={{fontSize: '3rem', fontWeight: 'bold', marginBottom: '0.25rem'}}>{getNoteEquipe(matchEnCours.id)}/10</div>
-                    <div style={{fontSize: '0.875rem', opacity: 0.8}}>Note moyenne de l'équipe</div>
-                  </div>
-                )}
-                <p style={{color: '#6b7280', marginTop: '0.25rem'}}>
-                  {matchEnCours.domicile === 'true' ? 'Domicile' : 'Extérieur'}
-                  {matchEnCours.statut === 'joue' && ` • Score: ${matchEnCours.scoreEquipe || 0} - ${matchEnCours.scoreAdversaire || 0}`}
-                </p>
-                {user.role === 'coach' && matchEnCours.statut === 'avenir' && (
-  <button
-    onClick={() => marquerCommeJoue(matchEnCours.id)}
-    style={{marginTop: '1rem', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '600'}}
-  >
-    ✓ Marquer comme joué
-  </button>
-)}
-                {user.role === 'coach' && matchEnCours.statut === 'joue' && (
-  <button
-    onClick={() => repasserEnAttente(matchEnCours.id)}
-    style={{marginTop: '1rem', padding: '0.5rem 1rem', borderRadius: '0.5rem', background: '#6b7280', color: 'white', border: 'none', cursor: 'pointer', fontSize: '0.875rem'}}
-  >
-    ⟲ Repasser en attente
-  </button>
-)}
-              </div>
-
-
-
-              {matchEnCours.statut === 'avenir' && (
-                <div style={{marginBottom: '1rem'}}>
-                  <h3 style={{fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem'}}>Gestion des convocations</h3>
-                  <div style={{display: 'flex', gap: '1rem', fontSize: '0.875rem', flexWrap: 'wrap'}}>
-                    <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontWeight: '600'}}>
-                      ⏳ En attente: {joueursList.filter(j => getStatutConvocation(selectedMatch, j.id) === 'en_attente').length}
-                    </span>
-                    <span style={{background: '#dcfce7', color: '#166534', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontWeight: '600'}}>
-                      ✓ Acceptées: {joueursList.filter(j => getStatutConvocation(selectedMatch, j.id) === 'accepte').length}
-                    </span>
-                    <span style={{background: '#fee2e2', color: '#dc2626', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontWeight: '600'}}>
-                      ✗ Refusées: {joueursList.filter(j => getStatutConvocation(selectedMatch, j.id) === 'refuse').length}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {matchEnCours.statut === 'joue' && (
-                <h3 style={{fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem'}}>Joueurs convoqués</h3>
-              )}
-
-              <div style={{display: 'grid', gap: '0.5rem'}}>
-                {joueursList.map(joueur => {
-                  const convoque = isConvoque(selectedMatch, joueur.id);
-                  const note = getNote(selectedMatch, joueur.id);
-                  const buts = getButs(selectedMatch, joueur.id);
-                  const temps = getTemps(selectedMatch, joueur.id);
-                  const passes = getPasses(selectedMatch, joueur.id);
-                  const isEditing = editingNote === joueur.id;
-                  
-                  if (matchEnCours.statut === 'joue' && !convoque) return null;
-                  
-                  return (
-                    <div key={joueur.id} style={{display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem', flexWrap: 'wrap'}}>
-                      <div style={{flex: '1 1 150px'}}>
-                        <p style={{fontWeight: '600', color: '#1f2937', margin: 0}}>{joueur.nom}</p>
-                        <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>@{joueur.username}</p>
-                      </div>
-         
-                      {matchEnCours.statut === 'avenir' && (
-                        <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
-                          {!convoque ? (
-                            <button
-                              onClick={() => convoquerJoueur(selectedMatch, joueur.id)}
-                              style={{padding: '0.625rem 1.25rem', borderRadius: '0.75rem', border: '2px solid #ff8800', cursor: 'pointer', background: '#ff8800', color: 'white', fontWeight: '700', fontSize: '0.875rem', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(255, 136, 0, 0.3)'}}
-                            >
-                              ✓ Convoquer
-                            </button>
-                          ) : (
-                            <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
-                              {getStatutConvocation(selectedMatch, joueur.id) === 'en_attente' && (
-                                <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: '600', fontSize: '0.875rem'}}>
-                                  ⏳ En attente
-                                </span>
-                              )}
-                              {getStatutConvocation(selectedMatch, joueur.id) === 'accepte' && (
-                                <span style={{background: '#dcfce7', color: '#166534', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: '600', fontSize: '0.875rem'}}>
-                                  ✓ Acceptée
-                                </span>
-                              )}
-                              {getStatutConvocation(selectedMatch, joueur.id) === 'refuse' && (
-                                <span style={{background: '#fee2e2', color: '#dc2626', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: '600', fontSize: '0.875rem'}}>
-                                  ✗ Refusée
-                                </span>
-                              )}
-                              <button
-                                onClick={() => deconvoquerJoueur(selectedMatch, joueur.id)}
-                                style={{padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #6b7280', cursor: 'pointer', background: '#6b7280', color: 'white', fontWeight: '600', fontSize: '0.75rem'}}
-                              >
-                                ✕ Annuler
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-{matchEnCours.statut === 'joue' && (user.role === 'coach' || user.role === 'coach_adjoint') && (
-   <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap'}}>
-
-                          {!isEditing && (note || buts > 0 || temps > 0 || passes > 0) ? (
-                            <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
-                              {note && (
-                                <span style={{background: getCouleurNote(note).bg, color: getCouleurNote(note).color, padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
-                                  {getCouleurNote(note).emoji} {note}/10 • {getTexteNote(note)}
-                                </span>
-                              )}
-                              {buts > 0 && (
-                                <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
-                                  ⚽ {buts} but{buts > 1 ? 's' : ''}
-                                </span>
-                              )}
-                              {temps > 0 && (
-                                <span style={{background: '#f3f4f6', color: '#1f2937', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
-                                  ⏱️ {temps} min
-                                </span>
-                              )}
-                              {passes > 0 && (
-                                <span style={{background: '#dbeafe', color: '#1e40af', padding: '0.5rem 0.75rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.875rem'}}>
-                                  🎯 {passes} passes D
-                                </span>
-                              )}
-                              <button
-                                onClick={() => {
-                                  setEditingNote(joueur.id);
-                                  setNoteInputs({ ...noteInputs, [joueur.id]: note });
-                                  setButInputs({ ...butInputs, [joueur.id]: buts || '' });
-                                  setTempsInputs({ ...tempsInputs, [joueur.id]: temps || '' });
-                                  setPassesInputs({ ...passesInputs, [joueur.id]: passes || '' });
-                                }}
-                                style={{background: '#6b7280', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem'}}
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                onClick={() => {
-                                  const newNotes = notes.filter(n => !(n.id_match === selectedMatch && n.id_joueur === joueur.id));
-                                  setNotes(newNotes);
-                                  const newButeurs = buteurs.filter(b => !(b.id_match === selectedMatch && b.id_joueur === joueur.id));
-                                  setButeurs(newButeurs);
-                                  const newTemps = tempsDeJeu.filter(t => !(t.id_match === selectedMatch && t.id_joueur === joueur.id));
-                                  setTempsDeJeu(newTemps);
-                                  const newPasses = passesD.filter(p => !(p.id_match === selectedMatch && p.id_joueur === joueur.id));
-                                  setPassesD(newPasses);
-                                }}
-                                style={{background: '#dc2626', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem'}}
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          ) : (
-                            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
-                              <input
-                                type="number"
-                                min="1"
-                                max="9"
-                                step="0.5"
-                                placeholder="Note"
-                                value={noteInputs[joueur.id] ?? ''}
-                                onChange={(e) => handleNoteChange(joueur.id, e.target.value)}
-                                disabled={user.role === 'coach_adjoint'}
-                                style={{width: '4.5rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
-                              />
-                              <input
-                                type="number"
-                                min="0"
-                                max="15"
-                                placeholder="Buts"
-                                value={butInputs[joueur.id] ?? ''}
-                                onChange={(e) => handleButsChange(joueur.id, e.target.value)}
-                                style={{width: '4rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
-                              />
-                              <input
-                                type="number"
-                                min="0"
-                                max="120"
-                                placeholder="Temps"
-                                value={tempsInputs[joueur.id] ?? ''}
-                                onChange={(e) => handleTempsChange(joueur.id, e.target.value)}
-                                style={{width: '5rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
-                              />
-                              <input
-                                type="number"
-                                min="0"
-                                max="30"
-                                placeholder="Passes D"
-                                value={passesInputs[joueur.id] ?? ''}
-                                onChange={(e) => handlePassesChange(joueur.id, e.target.value)}
-                                style={{width: '6rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
-                              />
-                              <button
-                                onClick={() => {
-                                  saveNote(joueur.id);
-                                  saveButs(joueur.id);
-                                  saveTemps(joueur.id);
-                                  savePasses(joueur.id);
-                                }}
-                                style={{background: '#ff8800', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem'}}
-                              >
-                                OK
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-{view === 'evaluations' && (
-<div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
-  <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Mes évaluations reçues</h2>
-  
-  {(() => {
-    const mesEvaluations = evaluationsCoach.filter(e => e.id_coach === user.id);
-    const nbEvaluations = mesEvaluations.length;
-    
-    if (nbEvaluations === 0) {
-      return (
-        <div style={{textAlign: 'center', padding: '2rem', color: '#6b7280'}}>
-          <p>Aucune évaluation reçue pour le moment.</p>
-        </div>
-      );
-    }
-    
-    const moyennes = {
-      entrainements: (mesEvaluations.reduce((sum, e) => sum + (e.entrainements || e.communication || 0), 0) / nbEvaluations).toFixed(2),
-      coaching: (mesEvaluations.reduce((sum, e) => sum + (e.coaching || e.tactique || 0), 0) / nbEvaluations).toFixed(2),
-      relation: (mesEvaluations.reduce((sum, e) => sum + (e.relation || e.respect || 0), 0) / nbEvaluations).toFixed(2),
-      globale: (mesEvaluations.reduce((sum, e) => sum + (e.note_globale || 0), 0) / nbEvaluations).toFixed(2)
-    };
-    
-    return (
-      <div>
-       <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem', border: '2px solid #ff8800'}}>
-  <div style={{textAlign: 'center'}}>
-    <div style={{fontSize: '3rem', fontWeight: 'bold', color: '#ff8800', marginBottom: '0rem'}}>
-      {moyennes.globale}
-    </div>
-    <div style={{fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem'}}>/10</div>
-    <div style={{fontSize: '1rem', color: '#6b7280'}}>
-      Note globale moyenne ({nbEvaluations} évaluation{nbEvaluations > 1 ? 's' : ''})
-    </div>
-  </div>
-</div>
-        
-        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}}>
-  <div style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '1.5rem', borderRadius: '1rem', textAlign: 'center', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'}}>
-    <div style={{fontSize: '2.5rem', marginBottom: '0.5rem'}}>⚽️</div>
-    <div style={{fontSize: '2.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0rem'}}>
-      {moyennes.entrainements}
-    </div>
-    <div style={{fontSize: '0.875rem', color: 'white', opacity: 0.7, marginBottom: '0.5rem'}}>/10</div>
-    <div style={{fontSize: '0.875rem', color: 'white', opacity: 0.9, fontWeight: '600'}}>Entraînements</div>
-  </div>
-  
-  <div style={{background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', padding: '1.5rem', borderRadius: '1rem', textAlign: 'center', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'}}>
-    <div style={{fontSize: '2.5rem', marginBottom: '0.5rem'}}>🧠</div>
-    <div style={{fontSize: '2.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0rem'}}>
-      {moyennes.coaching}
-    </div>
-    <div style={{fontSize: '0.875rem', color: 'white', opacity: 0.7, marginBottom: '0.5rem'}}>/10</div>
-    <div style={{fontSize: '0.875rem', color: 'white', opacity: 0.9, fontWeight: '600'}}>Coaching match</div>
-  </div>
-  
-  <div style={{background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '1.5rem', borderRadius: '1rem', textAlign: 'center', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)'}}>
-    <div style={{fontSize: '2.5rem', marginBottom: '0.5rem'}}>🤝</div>
-    <div style={{fontSize: '2.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0rem'}}>
-      {moyennes.relation}
-    </div>
-    <div style={{fontSize: '0.875rem', color: 'white', opacity: 0.7, marginBottom: '0.5rem'}}>/10</div>
-    <div style={{fontSize: '0.875rem', color: 'white', opacity: 0.9, fontWeight: '600'}}>Relation joueurs</div>
-  </div>
-</div>
-      </div>
+        {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => showNotification(null)} />}
+        <CoachView
+          user={user}
+          joueurs={joueurs}
+          matchs={matchs}
+          setMatchs={setMatchs}
+          convocations={convocations}
+          setConvocations={setConvocations}
+          notes={notes}
+          setNotes={setNotes}
+          buteurs={buteurs}
+          setButeurs={setButeurs}
+          tempsDeJeu={tempsDeJeu}
+          setTempsDeJeu={setTempsDeJeu}
+          passesD={passesD}
+          setPassesD={setPassesD}
+          evaluationsCoach={evaluationsCoach}
+          selectedMatch={selectedMatch}
+          setSelectedMatch={setSelectedMatch}
+          noteInputs={noteInputs}
+          setNoteInputs={setNoteInputs}
+          butInputs={butInputs}
+          setButInputs={setButInputs}
+          tempsInputs={tempsInputs}
+          setTempsInputs={setTempsInputs}
+          passesInputs={passesInputs}
+          setPassesInputs={setPassesInputs}
+          editingNote={editingNote}
+          setEditingNote={setEditingNote}
+          handleNoteChange={handleNoteChange}
+          handleButsChange={handleButsChange}
+          handleTempsChange={handleTempsChange}
+          handlePassesChange={handlePassesChange}
+          convoquerJoueur={(matchId, joueurId) => convoquerJoueur(matchId, joueurId, convocations, setConvocations)}
+          deconvoquerJoueur={(matchId, joueurId) => deconvoquerJoueur(matchId, joueurId, convocations, setConvocations)}
+          marquerCommeJoue={(matchId) => marquerCommeJoue(matchId, matchs)}
+          repasserEnAttente={(matchId) => repasserEnAttente(matchId, matchs, setMatchs, notes)}
+          saveNote={(joueurId) => saveNote(joueurId, selectedMatch, noteInputs, setNoteInputs, notes, setNotes, setEditingNote, showNotification)}
+          saveButs={(joueurId) => saveButs(joueurId, selectedMatch, butInputs, setButInputs, buteurs, setButeurs, showNotification)}
+          saveTemps={(joueurId) => saveTemps(joueurId, selectedMatch, tempsInputs, setTempsInputs, tempsDeJeu, setTempsDeJeu, showNotification)}
+          savePasses={(joueurId) => savePasses(joueurId, selectedMatch, passesInputs, setPassesInputs, passesD, setPassesD, showNotification)}
+          onLogout={logout}
+        />
+        <ScoreModal
+          show={showScoreModal}
+          match={matchToPlay}
+          scoreEquipe={scoreEquipeInput}
+          scoreAdversaire={scoreAdversaireInput}
+          onScoreEquipeChange={setScoreEquipeInput}
+          onScoreAdversaireChange={setScoreAdversaireInput}
+          onConfirm={() => confirmerScoreEtJouer(matchs, setMatchs, showNotification)}
+          onCancel={() => setShowScoreModal(false)}
+        />
+      </>
     );
-  })()}
-</div>
-)}
+  }
 
-{view === 'joueurs' && (
-            <div style={{display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))'}}>
-              {joueursList.map(joueur => {
-                const notesJoueur = notes.filter(n => n.id_joueur === joueur.id && n.note);
-                const moyenne = notesJoueur.length > 0
-                  ? (notesJoueur.reduce((sum, n) => sum + n.note, 0) / notesJoueur.length).toFixed(1)
-                  : '-';
-                const nbConvocs = convocations.filter(c => c.id_joueur === joueur.id && c.convoque).length;
-                const totalButs = getTotalButs(joueur.id);
-                const totalTemps = getTotalTemps(joueur.id);
-                const totalPasses = getTotalPasses(joueur.id);
-                
-                return (
-                  <div key={joueur.id} style={{background: 'white', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'}}>
-                    <div style={{marginBottom: '0.75rem'}}>
-                      <div style={{marginBottom: '0.5rem'}}>
-                        <h3 style={{fontWeight: 'bold', fontSize: '1.125rem', color: '#1f2937', margin: 0}}>{joueur.nom}</h3>
-                        <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>@{joueur.username}</p>
-                      </div>
-
-                      
-                      <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginTop: '0.75rem'}}>
-                        <div style={{textAlign: 'center', background: '#fff7ed', padding: '0.75rem', borderRadius: '0.5rem'}}>
-                          <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Moyenne</p>
-                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: moyenne !== '-' ? getCouleurNote(parseFloat(moyenne)).bg : '#ff8800', margin: 0}}>
-                            {moyenne !== '-' ? `${getCouleurNote(parseFloat(moyenne)).emoji} ${moyenne}` : moyenne}
-                          </p>
-                        </div>
-                        <div style={{textAlign: 'center', background: '#fff7ed', padding: '0.75rem', borderRadius: '0.5rem'}}>
-                          <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Buts</p>
-                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{totalButs}</p>
-                        </div>
-                        <div style={{textAlign: 'center', background: '#f3f4f6', padding: '0.75rem', borderRadius: '0.5rem'}}>
-                          <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Temps (min)</p>
-                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{totalTemps}</p>
-                        </div>
-                        <div style={{textAlign: 'center', background: '#dbeafe', padding: '0.75rem', borderRadius: '0.5rem'}}>
-                          <p style={{fontSize: '0.75rem', color: '#6b7280', margin: 0}}>Passes D</p>
-                          <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1e40af', margin: 0}}>{totalPasses}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{display: 'flex', gap: '0.5rem', fontSize: '0.875rem', flexWrap: 'wrap'}}>
-                      <div style={{background: '#f3f4f6', padding: '0.25rem 0.75rem', borderRadius: '9999px'}}>
-                        <span style={{color: '#1f2937', fontWeight: '600'}}>{notesJoueur.length} matchs</span>
-                      </div>
-                      <div style={{background: '#fff7ed', padding: '0.25rem 0.75rem', borderRadius: '9999px'}}>
-                        <span style={{color: '#9a3412', fontWeight: '600'}}>{nbConvocs} convocs</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-          )}
-        </div>
-      </div>
-    
-    
-    {showScoreModal && (
-      <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
-        <div style={{background: 'white', borderRadius: '1rem', padding: '2rem', maxWidth: '28rem', width: '90%'}}>
-          <h3 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Match joué - Saisir le score</h3>
-          <p style={{marginBottom: '1.5rem', color: '#6b7280'}}>{matchToPlay?.adversaire}</p>
-          
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem'}}>
-            <div>
-              <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>ESC Cappelle</label>
-              <input
-                type="number"
-                min="0"
-                value={scoreEquipeInput}
-                onChange={(e) => setScoreEquipeInput(e.target.value)}
-                style={{width: '100%', padding: '0.75rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold'}}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>Adversaire</label>
-              <input
-                type="number"
-                min="0"
-                value={scoreAdversaireInput}
-                onChange={(e) => setScoreAdversaireInput(e.target.value)}
-                style={{width: '100%', padding: '0.75rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold'}}
-                placeholder="0"
-              />
-            </div>
-          </div>
-          
-          <div style={{display: 'flex', gap: '0.75rem'}}>
-            <button
-              onClick={() => setShowScoreModal(false)}
-              style={{flex: 1, padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #6b7280', background: 'white', color: '#6b7280', cursor: 'pointer', fontWeight: '600'}}
-            >
-              Annuler
-            </button>
-            <button
-              onClick={confirmerScoreEtJouer}
-              style={{flex: 1, padding: '0.75rem', borderRadius: '0.5rem', background: '#ff8800', color: 'white', border: 'none', cursor: 'pointer', fontWeight: '600'}}
-            >
-              Valider
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-  </>
-  );
-}
-
-  const mesConvocations = convocations.filter(c => c.id_joueur === user.id && c.convoque);
-  const mesNotes = notes.filter(n => n.id_joueur === user.id && n.note);
-  const mesButs = getTotalButs(user.id);
-  const monTemps = getTotalTemps(user.id);
-  const mesPasses = getTotalPasses(user.id);
-  
-  const moyenne = mesNotes.length > 0
-  
-    ? (mesNotes.reduce((sum, n) => sum + n.note, 0) / mesNotes.length).toFixed(1)
-    : '-';
-
-  const prochainMatch = matchs.find(m => m.statut === 'avenir');
-  const convocationProchainMatch = prochainMatch && convocations.find(c => c.id_match === prochainMatch.id && c.id_joueur === user.id && c.convoque);
-
-  const graphData = mesNotes.map(n => {
-    const match = matchs.find(m => m.id === n.id_match);
-    return {
-      match: match?.adversaire?.substring(0, 12) || 'Match',
-      note: n.note
-    };
-  });
-
+  // Joueur View
   return (
     <>
-       {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-    <div style={{minHeight: '100vh', background: '#f9fafb'}}>
-      <div style={{background: '#000000', color: 'white', padding: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', borderBottom: '3px solid #ff8800'}}>
-        <div style={{maxWidth: '64rem', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
-          <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-            <img src="/logo_IH.png" alt="ESC Cappelle" style={{height: '60px', width: 'auto'}} />
-            <div>
-              <h1 style={{fontSize: '1.5rem', fontWeight: 'bold', margin: 0}}>Mon Espace Joueur</h1>
-              <p style={{margin: 0, color: '#ff8800', fontWeight: '600'}}>
-                ESC Cappelle - {user.nom}
-                {getNoteGeneraleEquipe() && (
-                  <span style={{marginLeft: '0.5rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteGeneraleEquipe()).bg, color: 'white'}}>
-                    {getCouleurEquipe(getNoteGeneraleEquipe()).emoji} Équipe: {getNoteGeneraleEquipe()}/10
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-          <div>
-            <button onClick={() => window.location.reload()} style={{background: '#6b7280', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', color: 'white', cursor: 'pointer', fontWeight: '600', marginRight: '0.5rem'}}>
-              Actualiser
-            </button>
-            <button onClick={handleLogout} style={{background: '#ff8800', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', color: 'white', cursor: 'pointer', fontWeight: '600'}}>
-              Déconnexion
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div style={{maxWidth: '64rem', margin: '1.5rem auto', padding: '0 1rem', paddingBottom: '2rem'}}>
-      <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap'}}>
-  <button onClick={() => setView('stats')} style={{flex: '1 1 200px', padding: '0.75rem', borderRadius: '0.75rem', fontWeight: '600', border: 'none', cursor: 'pointer', background: view === 'stats' || !view ? '#ff8800' : 'white', color: view === 'stats' || !view ? 'white' : '#1f2937', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'}}>
-    📊 Mes Stats
-  </button>
-  <button onClick={() => setView('evaluer')} style={{flex: '1 1 200px', padding: '0.75rem', borderRadius: '0.75rem', fontWeight: '600', border: 'none', cursor: 'pointer', background: view === 'evaluer' ? '#ff8800' : 'white', color: view === 'evaluer' ? 'white' : '#1f2937', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'}}>
-    ⭐ Evaluer les coachs
-  </button>
-</div>
-{view === 'evaluer' && (
-<div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
-  <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Evaluer les coachs</h2>
-  <p style={{color: '#6b7280', marginBottom: '1.5rem'}}>Donnez votre avis sur le travail de vos coachs (notes de 1 à 10)</p>
-  
-  <div style={{display: 'grid', gap: '1.5rem'}}>
-
-
-  <div style={{background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)', padding: '1.5rem', borderRadius: '1rem', border: '2px solid #ff8800', boxShadow: '0 8px 25px rgba(255, 136, 0, 0.3)'}}>
-  <div style={{display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem'}}>
-    <div style={{fontSize: '3rem'}}>⚽</div>
-    <div>
-      <h3 style={{fontWeight: 'bold', color: 'white', margin: 0, fontSize: '1.25rem'}}>Isma</h3>
-      <p style={{color: '#ff8800', margin: 0, fontSize: '0.875rem'}}>Coach principal</p>
-    </div>
-  </div>
-  
-  <div style={{display: 'grid', gap: '1rem'}}>
-    <div style={{background: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(255, 136, 0, 0.2)'}}>
-      <div style={{marginBottom: '0.75rem'}}>
-        <div style={{color: 'white', fontWeight: '600', marginBottom: '0.25rem'}}>⚽️ Qualité des entraînements</div>
-        <div style={{color: '#9ca3af', fontSize: '0.75rem'}}>Organisation, pertinence, intérêt des séances</div>
-      </div>
-      <input 
-        type="number" 
-        min="1" 
-        max="10" 
-        step="0.5"
-        placeholder="Note /10" 
-        value={evalIsma.entrainements}
-        onChange={(e) => setEvalIsma({...evalIsma, entrainements: e.target.value})}
-        style={{width: '100%', padding: '0.75rem', border: '2px solid #ff8800', borderRadius: '0.5rem', fontSize: '1.25rem', textAlign: 'center', fontWeight: 'bold', background: '#1f2937', color: 'white'}} 
+      {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => showNotification(null)} />}
+      <JoueurView
+        user={user}
+        matchs={matchs}
+        convocations={convocations}
+        setConvocations={setConvocations}
+        notes={notes}
+        buteurs={buteurs}
+        tempsDeJeu={tempsDeJeu}
+        passesD={passesD}
+        evaluationsCoach={evaluationsCoach}
+        setEvaluationsCoach={setEvaluationsCoach}
+        evalIsma={evalIsma}
+        setEvalIsma={setEvalIsma}
+        evalAdam={evalAdam}
+        setEvalAdam={setEvalAdam}
+        accepterConvocation={(matchId, joueurId) => accepterConvocation(matchId, joueurId, user, convocations, setConvocations, setActionJoueurEnCours)}
+        refuserConvocation={(matchId, joueurId) => refuserConvocation(matchId, joueurId, user, convocations, setConvocations, setActionJoueurEnCours)}
+        saveEvaluationIsma={() => saveEvaluationIsma(user, evaluationsCoach, setEvaluationsCoach, showNotification)}
+        saveEvaluationAdam={() => saveEvaluationAdam(user, evaluationsCoach, setEvaluationsCoach, showNotification)}
+        onLogout={logout}
       />
-    </div>
-    
-    <div style={{background: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(255, 136, 0, 0.2)'}}>
-      <div style={{marginBottom: '0.75rem'}}>
-        <div style={{color: 'white', fontWeight: '600', marginBottom: '0.25rem'}}>🧠 Coaching en match</div>
-        <div style={{color: '#9ca3af', fontSize: '0.75rem'}}>Tactique, changements, lecture du jeu</div>
-      </div>
-      <input 
-        type="number" 
-        min="1" 
-        max="10" 
-        step="0.5"
-        placeholder="Note /10" 
-        value={evalIsma.coaching}
-        onChange={(e) => setEvalIsma({...evalIsma, coaching: e.target.value})}
-        style={{width: '100%', padding: '0.75rem', border: '2px solid #ff8800', borderRadius: '0.5rem', fontSize: '1.25rem', textAlign: 'center', fontWeight: 'bold', background: '#1f2937', color: 'white'}} 
-      />
-    </div>
-    
-    <div style={{background: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(255, 136, 0, 0.2)'}}>
-      <div style={{marginBottom: '0.75rem'}}>
-        <div style={{color: 'white', fontWeight: '600', marginBottom: '0.25rem'}}>🤝 Relation avec les joueurs</div>
-        <div style={{color: '#9ca3af', fontSize: '0.75rem'}}>Communication, écoute, motivation</div>
-      </div>
-      <input 
-        type="number" 
-        min="1" 
-        max="10" 
-        step="0.5"
-        placeholder="Note /10" 
-        value={evalIsma.relation}
-        onChange={(e) => setEvalIsma({...evalIsma, relation: e.target.value})}
-        style={{width: '100%', padding: '0.75rem', border: '2px solid #ff8800', borderRadius: '0.5rem', fontSize: '1.25rem', textAlign: 'center', fontWeight: 'bold', background: '#1f2937', color: 'white'}} 
-      />
-    </div>
-    
-    {calculerMoyenne(evalIsma) && (
-  <div style={{background: getCouleurEvaluation(parseFloat(calculerMoyenne(evalIsma))).bg, padding: '1.5rem', borderRadius: '1rem', textAlign: 'center', boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)', border: `2px solid ${getCouleurEvaluation(parseFloat(calculerMoyenne(evalIsma))).border}`}}>
-    <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>{getCouleurEvaluation(parseFloat(calculerMoyenne(evalIsma))).emoji}</div>
-    <div style={{fontSize: '3.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0rem'}}>{calculerMoyenne(evalIsma)}</div>
-    <div style={{fontSize: '0.875rem', color: 'white', opacity: 0.8, marginBottom: '0.5rem'}}>/10</div>
-    <div style={{fontSize: '1rem', color: 'white', opacity: 0.9, fontWeight: '600'}}>{getCouleurEvaluation(parseFloat(calculerMoyenne(evalIsma))).text}</div>
-  </div>
-)}
-    
-    <button 
-      onClick={saveEvaluationIsma} 
-      style={{background: 'linear-gradient(135deg, #ff8800 0%, #ff6600 100%)', color: 'white', padding: '1rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '1rem', boxShadow: '0 4px 15px rgba(255, 136, 0, 0.4)'}}
-    >
-      💾 Sauvegarder mes notes
-    </button>
-  </div>
-</div>
-
-<div style={{background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)', padding: '1.5rem', borderRadius: '1rem', border: '2px solid #3b82f6', boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'}}>
-  <div style={{display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem'}}>
-    <div style={{fontSize: '3rem'}}>🎯</div>
-    <div>
-      <h3 style={{fontWeight: 'bold', color: 'white', margin: 0, fontSize: '1.25rem'}}>Adam</h3>
-      <p style={{color: '#3b82f6', margin: 0, fontSize: '0.875rem'}}>Coach adjoint</p>
-    </div>
-  </div>
-  
-  <div style={{display: 'grid', gap: '1rem'}}>
-    <div style={{background: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(59, 130, 246, 0.2)'}}>
-      <div style={{marginBottom: '0.75rem'}}>
-        <div style={{color: 'white', fontWeight: '600', marginBottom: '0.25rem'}}>⚽️ Qualité des entraînements</div>
-        <div style={{color: '#9ca3af', fontSize: '0.75rem'}}>Organisation, pertinence, intérêt des séances</div>
-      </div>
-      <input 
-        type="number" 
-        min="1" 
-        max="10" 
-        step="0.5"
-        placeholder="Note /10" 
-        value={evalAdam.entrainements}
-        onChange={(e) => setEvalAdam({...evalAdam, entrainements: e.target.value})}
-        style={{width: '100%', padding: '0.75rem', border: '2px solid #3b82f6', borderRadius: '0.5rem', fontSize: '1.25rem', textAlign: 'center', fontWeight: 'bold', background: '#1f2937', color: 'white'}} 
-      />
-    </div>
-    
-    <div style={{background: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(59, 130, 246, 0.2)'}}>
-      <div style={{marginBottom: '0.75rem'}}>
-        <div style={{color: 'white', fontWeight: '600', marginBottom: '0.25rem'}}>🧠 Coaching en match</div>
-        <div style={{color: '#9ca3af', fontSize: '0.75rem'}}>Tactique, changements, lecture du jeu</div>
-      </div>
-      <input 
-        type="number" 
-        min="1" 
-        max="10" 
-        step="0.5"
-        placeholder="Note /10" 
-        value={evalAdam.coaching}
-        onChange={(e) => setEvalAdam({...evalAdam, coaching: e.target.value})}
-        style={{width: '100%', padding: '0.75rem', border: '2px solid #3b82f6', borderRadius: '0.5rem', fontSize: '1.25rem', textAlign: 'center', fontWeight: 'bold', background: '#1f2937', color: 'white'}} 
-      />
-    </div>
-    
-    <div style={{background: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(59, 130, 246, 0.2)'}}>
-      <div style={{marginBottom: '0.75rem'}}>
-        <div style={{color: 'white', fontWeight: '600', marginBottom: '0.25rem'}}>🤝 Relation avec les joueurs</div>
-        <div style={{color: '#9ca3af', fontSize: '0.75rem'}}>Communication, écoute, motivation</div>
-      </div>
-      <input 
-        type="number" 
-        min="1" 
-        max="10" 
-        step="0.5"
-        placeholder="Note /10" 
-        value={evalAdam.relation}
-        onChange={(e) => setEvalAdam({...evalAdam, relation: e.target.value})}
-        style={{width: '100%', padding: '0.75rem', border: '2px solid #3b82f6', borderRadius: '0.5rem', fontSize: '1.25rem', textAlign: 'center', fontWeight: 'bold', background: '#1f2937', color: 'white'}} 
-      />
-    </div>
-    
-    {calculerMoyenne(evalAdam) && (
-  <div style={{background: getCouleurEvaluation(parseFloat(calculerMoyenne(evalAdam))).bg, padding: '1.5rem', borderRadius: '1rem', textAlign: 'center', boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)', border: `2px solid ${getCouleurEvaluation(parseFloat(calculerMoyenne(evalAdam))).border}`}}>
-    <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>{getCouleurEvaluation(parseFloat(calculerMoyenne(evalAdam))).emoji}</div>
-    <div style={{fontSize: '3.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0rem'}}>{calculerMoyenne(evalAdam)}</div>
-    <div style={{fontSize: '0.875rem', color: 'white', opacity: 0.8, marginBottom: '0.5rem'}}>/10</div>
-    <div style={{fontSize: '1rem', color: 'white', opacity: 0.9, fontWeight: '600'}}>{getCouleurEvaluation(parseFloat(calculerMoyenne(evalAdam))).text}</div>
-  </div>
-)}
-    
-    <button 
-      onClick={saveEvaluationAdam} 
-      style={{background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white', padding: '1rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '1rem', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'}}
-    >
-      💾 Sauvegarder mes notes
-    </button>
-  </div>
-</div>
-  </div>
-</div>
-)}
-        {prochainMatch && (
-          <div style={{padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem', background: convocationProchainMatch?.statut === 'accepte' ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)' : convocationProchainMatch?.statut === 'refuse' ? 'linear-gradient(90deg, #dc2626 0%, #b91c1c 100%)' : convocationProchainMatch ? 'linear-gradient(90deg, #ff8800 0%, #ff6600 100%)' : 'white', color: convocationProchainMatch ? 'white' : '#1f2937', border: convocationProchainMatch ? 'none' : '2px solid #e5e7eb'}}>
-            <div style={{fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', opacity: 0.9}}>
-              📅 Prochain match
-            </div>
-            <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem'}}>{prochainMatch.adversaire}</h2>
-            <p style={{marginBottom: '1rem', opacity: 0.9}}>{formaterDate(prochainMatch.date)} - {prochainMatch.domicile === 'true' ? 'Domicile' : 'Extérieur'}</p>
-            
-            {!convocationProchainMatch && (
-              <div style={{fontSize: '1.125rem', fontWeight: 'bold'}}>
-                ✕ Non convoqué
-              </div>
-            )}
-            
-            {convocationProchainMatch?.statut === 'en_attente' && (
-              <div>
-                <div style={{fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem'}}>
-                  ⏳ Convocation en attente
-                </div>
-                <div style={{display: 'flex', gap: '0.75rem'}}>
-                  <button
-                    onClick={() => accepterConvocation(prochainMatch.id, user.id)}
-                    style={{flex: 1, background: '#10b981', color: 'white', padding: '0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: '600'}}
-                  >
-                    ✓ Accepter
-                  </button>
-                  <button
-                    onClick={() => refuserConvocation(prochainMatch.id, user.id)}
-                    style={{flex: 1, background: '#dc2626', color: 'white', padding: '0.75rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: '600'}}
-                  >
-                    ✕ Refuser
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {convocationProchainMatch?.statut === 'accepte' && (
-              <div style={{fontSize: '1.125rem', fontWeight: 'bold'}}>
-                ✓ Convocation acceptée
-              </div>
-            )}
-            
-            {convocationProchainMatch?.statut === 'refuse' && (
-              <div style={{fontSize: '1.125rem', fontWeight: 'bold'}}>
-                ✗ Convocation refusée
-              </div>
-            )}
-          </div>
-
-          
-        )}
-
-        <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
-          <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Mes statistiques</h2>
-          <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', textAlign: 'center'}}>
-
-
-            <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
-            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>🎮</div>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Matchs</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{mesNotes.length}</p>
-            </div>
-
-
-            <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem'}}>
-            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>⭐</div>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Moyenne</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: moyenne !== '-' ? getCouleurNote(parseFloat(moyenne)).bg : '#ff8800', margin: 0}}>
-                {moyenne !== '-' ? `${getCouleurNote(parseFloat(moyenne)).emoji} ${moyenne}` : moyenne}
-              </p>
-            </div>
-
-
-            <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
-            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>📋</div>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Convocs</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{mesConvocations.length}</p>
-            </div>
-
-            <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '0.5rem'}}>
-            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>⚽</div>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Buts</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#ff8800', margin: 0}}>{mesButs}</p>
-            </div>
-
-            <div style={{background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem'}}>
-            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>⏱️</div>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Temps (min)</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0}}>{monTemps}</p>
-            </div>
-
-            <div style={{background: '#dbeafe', padding: '1rem', borderRadius: '0.5rem'}}>
-            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>🎯</div>
-              <p style={{color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem'}}>Passes D</p>
-              <p style={{fontSize: '1.5rem', fontWeight: 'bold', color: '#1e40af', margin: 0}}>{mesPasses}</p>
-            </div>
-
-          </div>
-        </div>
-
-        {graphData.length > 0 && (
-          <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
-            <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>
-              📈 Ma progression
-            </h2>
-            <SimpleLineChart data={graphData} />
-          </div>
-        )}
-
-        <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}}>
-          <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Historique</h2>
-          {mesNotes.length === 0 ? (
-            <div style={{textAlign: 'center', padding: '2rem', color: '#6b7280'}}>
-              <p>Aucune note enregistrée.</p>
-            </div>
-          ) : (
-            <div style={{display: 'grid', gap: '0.75rem'}}>
-             {mesNotes.sort((a, b) => b.id_match - a.id_match).map((n, idx) => {
-  const match = matchs.find(m => m.id === n.id_match);
-  const butsDuMatch = getButs(match.id, user.id);
-  const tempsDuMatch = getTemps(match.id, user.id);
-  const passesDuMatch = getPasses(match.id, user.id);
-  return (
-    <div key={idx} style={{padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem'}}>
-      <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
-        <div>
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem'}}>
-            <div>
-              <p style={{fontWeight: '600', color: '#1f2937', margin: 0}}>{match?.adversaire}</p>
-              <p style={{fontSize: '0.875rem', color: '#6b7280', margin: 0}}>
-              {formaterDate(match?.date)} • Score: {match?.scoreEquipe || 0} - {match?.scoreAdversaire || 0}
-              </p>
-            </div>
-            <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.25rem'}}>
-            {match?.scoreEquipe > match?.scoreAdversaire && (
-  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#dcfce7', color: '#166534', minWidth: '85px', textAlign: 'center', display: 'inline-block'}}>
-    ✓ Victoire
-  </span>
-)}
-{match?.scoreEquipe < match?.scoreAdversaire && (
-  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#fee2e2', color: '#dc2626', minWidth: '85px', textAlign: 'center', display: 'inline-block'}}>
-    ✗ Défaite
-  </span>
-)}
-{match?.scoreEquipe === match?.scoreAdversaire && (
-  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#f3f4f6', color: '#6b7280', minWidth: '85px', textAlign: 'center', display: 'inline-block'}}>
-    = Nul
-  </span>
-)}
-</div>
-            <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
-            {match.statut === 'joue' && getNoteEquipe(match.id) && (
-  <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurEquipe(getNoteEquipe(match.id)).bg, color: 'white', minWidth: '120px', textAlign: 'center', display: 'inline-block'}}>
-    {getCouleurEquipe(getNoteEquipe(match.id)).emoji} Équipe: {getNoteEquipe(match.id)}/10
-  </span>
-)}
-<span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurNote(n.note).bg, color: 'white', minWidth: '120px', textAlign: 'center', display: 'inline-block'}}>
-  {getCouleurNote(n.note).emoji} Joueur: {n.note}/10
-</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      {(butsDuMatch > 0 || tempsDuMatch > 0 || passesDuMatch > 0) && (
-        <div style={{marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
-       {butsDuMatch > 0 && (
-  <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600', minWidth: '75px', textAlign: 'center', display: 'inline-block'}}>
-    ⚽ {butsDuMatch} but{butsDuMatch > 1 ? 's' : ''}
-  </span>
-)}
-{tempsDuMatch > 0 && (
-  <span style={{background: '#f3f4f6', color: '#1f2937', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600', minWidth: '75px', textAlign: 'center', display: 'inline-block'}}>
-    ⏱️ {tempsDuMatch} min
-  </span>
-)}
-{passesDuMatch > 0 && (
-  <span style={{background: '#dbeafe', color: '#1e40af', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '600', minWidth: '100px', textAlign: 'center', display: 'inline-block'}}>
-    🎯 {passesDuMatch} passes D
-  </span>
-)}
-        </div>
-      )}
-    </div>
+    </>
   );
-})}
-            </div>
-            
-          )}
-        </div>
-        </div>
-    </div>
-   
-    {showScoreModal && (
-      <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
-        <div style={{background: 'white', borderRadius: '1rem', padding: '2rem', maxWidth: '28rem', width: '90%'}}>
-          <h3 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Match joué - Saisir le score</h3>
-          <p style={{marginBottom: '1.5rem', color: '#6b7280'}}>{matchToPlay?.adversaire}</p>
-          
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem'}}>
-            <div>
-              <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>ESC Cappelle</label>
-              <input
-                type="number"
-                min="0"
-                value={scoreEquipeInput}
-                onChange={(e) => setScoreEquipeInput(e.target.value)}
-                style={{width: '100%', padding: '0.75rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold'}}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label style={{display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem'}}>Adversaire</label>
-              <input
-                type="number"
-                min="0"
-                value={scoreAdversaireInput}
-                onChange={(e) => setScoreAdversaireInput(e.target.value)}
-                style={{width: '100%', padding: '0.75rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '1.5rem', textAlign: 'center', fontWeight: 'bold'}}
-                placeholder="0"
-              />
-            </div>
-          </div>
-          
-          <div style={{display: 'flex', gap: '0.75rem'}}>
-            <button
-              onClick={() => setShowScoreModal(false)}
-              style={{flex: 1, padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #6b7280', background: 'white', color: '#6b7280', cursor: 'pointer', fontWeight: '600'}}
-            >
-              Annuler
-            </button>
-            <button
-              onClick={confirmerScoreEtJouer}
-              style={{flex: 1, padding: '0.75rem', borderRadius: '0.5rem', background: '#ff8800', color: 'white', border: 'none', cursor: 'pointer', fontWeight: '600'}}
-            >
-              Valider
-            </button>
-          </div>
-        </div>
-      </div>
-)}
-</>
-);
 }
 
 export default App;
