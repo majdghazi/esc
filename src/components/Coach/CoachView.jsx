@@ -6,11 +6,15 @@ import MatchDetail from './MatchDetail';
 import JoueursList from './JoueursList';
 import EvaluationsView from './EvaluationsView';
 import ConvocationsList from './ConvocationsList';
+import SimpleLineChart from '../Shared/SimpleLineChart';
 import { getNoteEquipe } from '../../utils/noteCalculator';
 import { isConvoque, getStatutConvocation, getNote } from '../../utils/convocationHelpers';
 import { getButs, getTemps, getPasses } from '../../utils/statsCalculator';
 import { getCouleurNote } from '../../utils/colors';
 import { getTexteNote } from '../../utils/noteCalculator';
+import { getGraphDataEquipe } from '../../utils/noteCalculator';
+
+
 
 const CoachView = ({
   user,
@@ -57,7 +61,7 @@ const CoachView = ({
   const matchEnCours = matchs.find(m => m.id === selectedMatch);
   const joueursList = joueurs.filter(j => j.role === 'joueur');
   const noteEquipe = matchEnCours ? getNoteEquipe(notes, matchEnCours.id) : null;
-
+  const graphDataEquipe = getGraphDataEquipe(notes, matchs);
   return (
     <div style={{minHeight: '100vh', background: '#f9fafb'}}>
       <CoachHeader user={user} notes={notes} onLogout={onLogout} />
@@ -71,7 +75,14 @@ const CoachView = ({
             joueursCount={joueursList.length}
           />
         )}
-
+{graphDataEquipe.length > 0 && (
+  <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
+    <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>
+      📈 Évolution de l'équipe
+    </h2>
+    <SimpleLineChart data={graphDataEquipe} />
+  </div>
+)}
         {view === 'matchs' && !selectedMatch && (
           <MatchsList
             matchs={matchs}

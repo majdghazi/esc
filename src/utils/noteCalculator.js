@@ -28,3 +28,15 @@ export const calculerMoyenne = (evaluation) => {
     if (note >= 5) return 'Correct';
     return 'À améliorer';
   };
+
+  export const getGraphDataEquipe = (notes, matchs) => {
+    const matchsJoues = matchs.filter(m => m.statut === 'joue').sort((a, b) => a.id - b.id);
+    
+    return matchsJoues.map(match => {
+      const noteEquipe = getNoteEquipe(notes, match.id);
+      return {
+        match: match.adversaire.substring(0, 15),
+        note: noteEquipe ? parseFloat(noteEquipe) : null
+      };
+    }).filter(d => d.note !== null);
+  };

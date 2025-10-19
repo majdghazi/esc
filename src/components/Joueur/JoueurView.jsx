@@ -9,6 +9,10 @@ import SimpleLineChart from '../Shared/SimpleLineChart';
 import { getProchainMatch } from '../../utils/matchHelpers';
 import { getMoyenneJoueur, getGraphData } from '../../utils/playerActions';
 import { getTotalButs, getTotalTemps, getTotalPasses } from '../../utils/statsCalculator';
+import { getGraphDataEquipe } from '../../utils/noteCalculator';
+
+
+
 
 const JoueurView = ({
   user,
@@ -41,6 +45,7 @@ const JoueurView = ({
   const mesPasses = getTotalPasses(passesD, user.id);
   const moyenne = getMoyenneJoueur(notes, user.id);
   const graphData = getGraphData(notes, matchs, user.id);
+  const graphDataEquipe = getGraphDataEquipe(notes, matchs);
 
   return (
     <div style={{minHeight: '100vh', background: '#f9fafb'}}>
@@ -106,6 +111,14 @@ const JoueurView = ({
                 <SimpleLineChart data={graphData} />
               </div>
             )}
+            {graphDataEquipe.length > 0 && (
+  <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
+    <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>
+      📈 Évolution de l'équipe
+    </h2>
+    <SimpleLineChart data={graphDataEquipe} />
+  </div>
+)}
 
 <HistoriqueMatchs
   notes={mesNotes}
