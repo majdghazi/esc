@@ -107,14 +107,15 @@ const JoueurView = ({
               </div>
             )}
 
-            <HistoriqueMatchs
-              notes={mesNotes}
-              matchs={matchs}
-              buteurs={buteurs}
-              tempsDeJeu={tempsDeJeu}
-              passesD={passesD}
-              userId={user.id}
-            />
+<HistoriqueMatchs
+  notes={mesNotes}
+  allNotes={notes}  // ✅ AJOUTE ÇA : toutes les notes de l'équipe
+  matchs={matchs}
+  buteurs={buteurs}
+  tempsDeJeu={tempsDeJeu}
+  passesD={passesD}
+  userId={user.id}
+/>
           </>
         )}
       </div>

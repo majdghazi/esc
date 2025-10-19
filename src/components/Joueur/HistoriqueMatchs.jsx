@@ -4,7 +4,7 @@ import { getCouleurNote, getCouleurEquipe } from '../../utils/colors';
 import { getNoteEquipe } from '../../utils/noteCalculator';
 import { getButs, getTemps, getPasses } from '../../utils/statsCalculator';
 
-const HistoriqueMatchs = ({ notes, matchs, buteurs, tempsDeJeu, passesD, userId }) => {
+const HistoriqueMatchs = ({ notes, allNotes, matchs, buteurs, tempsDeJeu, passesD, userId }) => {
   if (notes.length === 0) {
     return (
       <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}}>
@@ -25,7 +25,7 @@ const HistoriqueMatchs = ({ notes, matchs, buteurs, tempsDeJeu, passesD, userId 
           const butsDuMatch = getButs(buteurs, match.id, userId);
           const tempsDuMatch = getTemps(tempsDeJeu, match.id, userId);
           const passesDuMatch = getPasses(passesD, match.id, userId);
-          const noteEquipe = getNoteEquipe(notes, match.id);
+          const noteEquipe = getNoteEquipe(allNotes, match.id);
 
           return (
             <div key={idx} style={{padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem'}}>
