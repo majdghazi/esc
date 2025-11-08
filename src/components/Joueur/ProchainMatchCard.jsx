@@ -27,7 +27,7 @@ const ProchainMatchCard = ({
       </div>
       <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem'}}>{match.adversaire}</h2>
       <p style={{marginBottom: '1rem', opacity: 0.9}}>
-        {formaterDate(match.date)} - {match.domicile === 'true' ? 'Domicile' : 'Extérieur'}
+        {formaterDate(match.date)} - {match.domicile ? 'Domicile' : 'Extérieur'}
       </p>
 
       {!convocation && (

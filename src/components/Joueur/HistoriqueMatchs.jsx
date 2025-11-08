@@ -4,13 +4,17 @@ import { getCouleurNote, getCouleurEquipe } from '../../utils/colors';
 import { getNoteEquipe } from '../../utils/noteCalculator';
 import { getButs, getTemps, getPasses } from '../../utils/statsCalculator';
 
-const HistoriqueMatchs = ({ notes, allNotes, matchs, buteurs, tempsDeJeu, passesD, userId }) => {
-  if (notes.length === 0) {
+const HistoriqueMatchs = ({ notes, allNotes, matchs, buteurs, tempsDeJeu, passesD, userId, convocations }) => {
+  // TRI CHRONOLOGIQUE: du plus ANCIEN au plus RÉCENT (ordre temporel normal)
+  // La date est stockée en format ISO dans Firebase
+  const matchsJoues = matchs.filter(m => m.statut === 'joue').sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (matchsJoues.length === 0) {
     return (
       <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}}>
         <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Historique</h2>
         <div style={{textAlign: 'center', padding: '2rem', color: '#6b7280'}}>
-          <p>Aucune note enregistrée.</p>
+          <p>Aucun match joué pour le moment.</p>
         </div>
       </div>
     );
@@ -20,8 +24,9 @@ const HistoriqueMatchs = ({ notes, allNotes, matchs, buteurs, tempsDeJeu, passes
     <div style={{background: 'white', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}}>
       <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937'}}>Historique</h2>
       <div style={{display: 'grid', gap: '0.75rem'}}>
-        {notes.sort((a, b) => b.id_match - a.id_match).map((n, idx) => {
-          const match = matchs.find(m => m.id === n.id_match);
+        {matchsJoues.map((match, idx) => {
+          const noteJoueur = notes.find(n => n.id_match === match.id);
+          const convoque = convocations?.find(c => c.id_match === match.id && c.id_joueur === userId && c.est_convoque);
           const butsDuMatch = getButs(buteurs, match.id, userId);
           const tempsDuMatch = getTemps(tempsDeJeu, match.id, userId);
           const passesDuMatch = getPasses(passesD, match.id, userId);
@@ -38,20 +43,29 @@ const HistoriqueMatchs = ({ notes, allNotes, matchs, buteurs, tempsDeJeu, passes
                         {formaterDate(match?.date)} • Score: {match?.scoreEquipe || 0} - {match?.scoreAdversaire || 0}
                       </p>
                     </div>
-                    <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.25rem'}}>
+                    <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap'}}>
                       {match?.scoreEquipe > match?.scoreAdversaire && (
                         <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#dcfce7', color: '#166534', minWidth: '85px', textAlign: 'center', display: 'inline-block'}}>
-                          ✓ Victoire
+                          Victoire
                         </span>
                       )}
                       {match?.scoreEquipe < match?.scoreAdversaire && (
                         <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#fee2e2', color: '#dc2626', minWidth: '85px', textAlign: 'center', display: 'inline-block'}}>
-                          ✗ Défaite
+                          Défaite
                         </span>
                       )}
                       {match?.scoreEquipe === match?.scoreAdversaire && (
                         <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#f3f4f6', color: '#6b7280', minWidth: '85px', textAlign: 'center', display: 'inline-block'}}>
-                          = Nul
+                          Nul
+                        </span>
+                      )}
+                      {convoque ? (
+                        <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#dbeafe', color: '#1e40af', minWidth: '100px', textAlign: 'center', display: 'inline-block'}}>
+                          ✓ Convoqué
+                        </span>
+                      ) : (
+                        <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: '#f3f4f6', color: '#6b7280', minWidth: '120px', textAlign: 'center', display: 'inline-block'}}>
+                          ✗ Pas convoqué
                         </span>
                       )}
                     </div>
@@ -61,9 +75,11 @@ const HistoriqueMatchs = ({ notes, allNotes, matchs, buteurs, tempsDeJeu, passes
                           {getCouleurEquipe(noteEquipe).emoji} Équipe: {noteEquipe}/10
                         </span>
                       )}
-                      <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurNote(n.note).bg, color: 'white', minWidth: '120px', textAlign: 'center', display: 'inline-block'}}>
-                        {getCouleurNote(n.note).emoji} Joueur: {n.note}/10
-                      </span>
+                      {noteJoueur && noteJoueur.note && (
+                        <span style={{padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', background: getCouleurNote(noteJoueur.note).bg, color: 'white', minWidth: '120px', textAlign: 'center', display: 'inline-block'}}>
+                          {getCouleurNote(noteJoueur.note).emoji} Joueur: {noteJoueur.note}/10
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

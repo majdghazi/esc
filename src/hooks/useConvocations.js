@@ -1,7 +1,7 @@
 const useConvocations = () => {
     const convoquerJoueur = (matchId, joueurId, convocations, setConvocations) => {
       const newConvocs = [...convocations];
-      newConvocs.push({ id_match: matchId, id_joueur: joueurId, convoque: true, statut: 'en_attente' });
+      newConvocs.push({ id_match: matchId, id_joueur: joueurId, est_convoque: true, statut: 'en_attente', coach_a_envoye: true });
       setConvocations(newConvocs);
     };
   

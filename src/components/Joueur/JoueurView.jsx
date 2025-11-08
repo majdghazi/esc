@@ -6,6 +6,7 @@ import JoueurStats from './JoueurStats';
 import HistoriqueMatchs from './HistoriqueMatchs';
 import EvaluationCoach from './EvaluationCoach';
 import SimpleLineChart from '../Shared/SimpleLineChart';
+import PodiumTop3 from '../Shared/PodiumTop3';
 import { getProchainMatch } from '../../utils/matchHelpers';
 import { getMoyenneJoueur, getGraphData } from '../../utils/playerActions';
 import { getTotalButs, getTotalTemps, getTotalPasses } from '../../utils/statsCalculator';
@@ -16,6 +17,7 @@ import { getGraphDataEquipe } from '../../utils/noteCalculator';
 
 const JoueurView = ({
   user,
+  joueurs,
   matchs,
   convocations,
   notes,
@@ -36,9 +38,9 @@ const JoueurView = ({
   const [view, setView] = useState('stats');
 
   const prochainMatch = getProchainMatch(matchs);
-  const convocationProchainMatch = prochainMatch && convocations.find(c => c.id_match === prochainMatch.id && c.id_joueur === user.id && c.convoque);
+  const convocationProchainMatch = prochainMatch && convocations.find(c => c.id_match === prochainMatch.id && c.id_joueur === user.id && c.est_convoque);
 
-  const mesConvocations = convocations.filter(c => c.id_joueur === user.id && c.convoque);
+  const mesConvocations = convocations.filter(c => c.id_joueur === user.id && c.est_convoque);
   const mesNotes = notes.filter(n => n.id_joueur === user.id && n.note);
   const mesButs = getTotalButs(buteurs, user.id);
   const monTemps = getTotalTemps(tempsDeJeu, user.id);
@@ -120,14 +122,23 @@ const JoueurView = ({
   </div>
 )}
 
+<PodiumTop3
+  joueurs={joueurs}
+  notes={notes}
+  buteurs={buteurs}
+  tempsDeJeu={tempsDeJeu}
+  passesD={passesD}
+/>
+
 <HistoriqueMatchs
   notes={mesNotes}
-  allNotes={notes}  // ✅ AJOUTE ÇA : toutes les notes de l'équipe
+  allNotes={notes}
   matchs={matchs}
   buteurs={buteurs}
   tempsDeJeu={tempsDeJeu}
   passesD={passesD}
   userId={user.id}
+  convocations={convocations}
 />
           </>
         )}

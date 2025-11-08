@@ -1,9 +1,9 @@
 export const isConvoque = (convocations, matchId, joueurId) => {
-    return convocations.some(c => c.id_match === matchId && c.id_joueur === joueurId && c.convoque);
+    return convocations.some(c => c.id_match === matchId && c.id_joueur === joueurId && c.est_convoque);
   };
-  
+
   export const getStatutConvocation = (convocations, matchId, joueurId) => {
-    const convoc = convocations.find(c => c.id_match === matchId && c.id_joueur === joueurId && c.convoque);
+    const convoc = convocations.find(c => c.id_match === matchId && c.id_joueur === joueurId && c.est_convoque);
     return convoc?.statut || null;
   };
   

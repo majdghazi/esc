@@ -45,7 +45,7 @@ const useEvaluations = () => {
         entrainements: parseFloat(evalIsma.entrainements) || 0,
         coaching: parseFloat(evalIsma.coaching) || 0,
         relation: parseFloat(evalIsma.relation) || 0,
-        note_globale: parseFloat(moyenneCalculee),
+        note_globale: parseFloat(moyenneCalculee).toFixed(1),
         derniere_modification: new Date().toISOString()
       });
 
@@ -66,7 +66,7 @@ const useEvaluations = () => {
         entrainements: parseFloat(evalAdam.entrainements) || 0,
         coaching: parseFloat(evalAdam.coaching) || 0,
         relation: parseFloat(evalAdam.relation) || 0,
-        note_globale: parseFloat(moyenneCalculee),
+        note_globale: parseFloat(moyenneCalculee).toFixed(1),
         derniere_modification: new Date().toISOString()
       });
 

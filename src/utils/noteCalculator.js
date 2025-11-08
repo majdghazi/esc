@@ -2,7 +2,7 @@ export const calculerMoyenne = (evaluation) => {
     const notes = [evaluation.entrainements, evaluation.coaching, evaluation.relation].filter(n => n !== '' && !isNaN(n));
     if (notes.length === 0) return '';
     const moyenne = notes.reduce((sum, note) => sum + parseFloat(note), 0) / notes.length;
-    return moyenne.toFixed(2);
+    return moyenne.toFixed(1);
   };
   
   export const getNoteEquipe = (notes, matchId) => {

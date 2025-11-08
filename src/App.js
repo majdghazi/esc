@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 // Hooks personnalisés
 import useAuth from './hooks/useAuth';
 import useNotification from './hooks/useNotification';
-import useGoogleSheets from './hooks/useGoogleSheets';
+import useFirestore from './hooks/useFirestore';
 import useMatchManagement from './hooks/useMatchManagement';
 import useEvaluations from './hooks/useEvaluations';
 import usePlayerStats from './hooks/usePlayerStats';
@@ -41,7 +41,7 @@ function App() {
   // Notifications
   const { notification, showNotification } = useNotification();
 
-  // Google Sheets
+  // Firestore
   const {
     joueurs,
     matchs,
@@ -62,7 +62,7 @@ function App() {
     chargerDonnees,
     actionJoueurEnCours,
     setActionJoueurEnCours
-  } = useGoogleSheets(user);  // ← AJOUTE (user) ICI !
+  } = useFirestore(user);
 
   // Match Management
   const {
@@ -242,6 +242,7 @@ function App() {
       {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => showNotification(null)} />}
       <JoueurView
         user={user}
+        joueurs={joueurs}
         matchs={matchs}
         convocations={convocations}
         setConvocations={setConvocations}

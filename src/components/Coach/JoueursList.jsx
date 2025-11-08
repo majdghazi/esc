@@ -4,11 +4,44 @@ import { getMoyenneJoueur } from '../../utils/playerActions';
 import { getTotalButs, getTotalTemps, getTotalPasses } from '../../utils/statsCalculator';
 
 const JoueursList = ({ joueurs, notes, convocations, buteurs, tempsDeJeu, passesD }) => {
+  // Fonction pour calculer le score de classement d'un joueur
+  const calculerScore = (joueur) => {
+    const moyenne = getMoyenneJoueur(notes, joueur.id);
+    if (moyenne === '-') return -1; // Les joueurs sans notes seront en dernier
+
+    const noteFloat = parseFloat(moyenne);
+    const totalButs = getTotalButs(buteurs, joueur.id);
+    const totalTemps = getTotalTemps(tempsDeJeu, joueur.id);
+    const totalPasses = getTotalPasses(passesD, joueur.id);
+
+    // Calculer le nombre de matchs joués par ce joueur
+    const nbMatchsJoues = notes.filter(n => n.id_joueur === joueur.id && n.note).length;
+
+    // Temps maximum possible = nombre de matchs × 90 minutes
+    const tempsMaxPossible = nbMatchsJoues * 90;
+
+    // Note temps sur 10 : (temps joué / temps max possible) × 10
+    // Exemple : 318 min sur 4 matchs (360 min max) = (318/360) × 10 = 8.8/10
+    const noteTempsSur10 = tempsMaxPossible > 0 ? (totalTemps / tempsMaxPossible) * 10 : 0;
+
+    // Si c'est un gardien (role === 'gardien')
+    if (joueur.role === 'gardien') {
+      // Formule gardien : Note 60% + Temps 40%
+      return (noteFloat * 0.6) + (noteTempsSur10 * 0.4);
+    }
+
+    // Formule joueur normal : Note 50% + Buts 20% + Passes D 15% + Temps 15%
+    return (noteFloat * 0.5) + (totalButs * 0.2) + (totalPasses * 0.15) + (noteTempsSur10 * 0.15);
+  };
+
+  // Trier les joueurs par score décroissant (du meilleur au moins bon)
+  const joueursTries = [...joueurs].sort((a, b) => calculerScore(b) - calculerScore(a));
+
   return (
     <div style={{display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))'}}>
-      {joueurs.map(joueur => {
+      {joueursTries.map(joueur => {
         const moyenne = getMoyenneJoueur(notes, joueur.id);
-        const nbConvocs = convocations.filter(c => c.id_joueur === joueur.id && c.convoque).length;
+        const nbConvocs = convocations.filter(c => c.id_joueur === joueur.id && c.est_convoque).length;
         const totalButs = getTotalButs(buteurs, joueur.id);
         const totalTemps = getTotalTemps(tempsDeJeu, joueur.id);
         const totalPasses = getTotalPasses(passesD, joueur.id);

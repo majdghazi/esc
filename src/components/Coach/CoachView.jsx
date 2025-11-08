@@ -7,6 +7,7 @@ import JoueursList from './JoueursList';
 import EvaluationsView from './EvaluationsView';
 import ConvocationsList from './ConvocationsList';
 import SimpleLineChart from '../Shared/SimpleLineChart';
+import PodiumTop3 from '../Shared/PodiumTop3';
 import { getNoteEquipe } from '../../utils/noteCalculator';
 import { isConvoque, getStatutConvocation, getNote } from '../../utils/convocationHelpers';
 import { getButs, getTemps, getPasses } from '../../utils/statsCalculator';
@@ -59,7 +60,7 @@ const CoachView = ({
   const [view, setView] = useState('matchs');
 
   const matchEnCours = matchs.find(m => m.id === selectedMatch);
-  const joueursList = joueurs.filter(j => j.role === 'joueur');
+  const joueursList = joueurs.filter(j => j.role === 'joueur' || j.role === 'gardien');
   const noteEquipe = matchEnCours ? getNoteEquipe(notes, matchEnCours.id) : null;
   const graphDataEquipe = getGraphDataEquipe(notes, matchs);
   return (
@@ -195,7 +196,7 @@ const CoachView = ({
                               value={noteInputs[joueur.id] ?? ''}
                               onChange={(e) => handleNoteChange(joueur.id, e.target.value)}
                               disabled={user.role === 'coach_adjoint'}
-                              style={{width: '4.5rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
+                              style={{width: '4.5rem', padding: '0.5rem', border: `2px solid ${noteInputs[joueur.id] && (noteInputs[joueur.id] < 1 || noteInputs[joueur.id] > 9) ? '#dc2626' : '#e5e7eb'}`, borderRadius: '0.5rem', fontSize: '0.875rem'}}
                             />
                             <input
                               type="number"
@@ -204,7 +205,7 @@ const CoachView = ({
                               placeholder="Buts"
                               value={butInputs[joueur.id] ?? ''}
                               onChange={(e) => handleButsChange(joueur.id, e.target.value)}
-                              style={{width: '4rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
+                              style={{width: '4rem', padding: '0.5rem', border: `2px solid ${butInputs[joueur.id] && (butInputs[joueur.id] < 0 || butInputs[joueur.id] > 15) ? '#dc2626' : '#e5e7eb'}`, borderRadius: '0.5rem', fontSize: '0.875rem'}}
                             />
                             <input
                               type="number"
@@ -213,7 +214,7 @@ const CoachView = ({
                               placeholder="Temps"
                               value={tempsInputs[joueur.id] ?? ''}
                               onChange={(e) => handleTempsChange(joueur.id, e.target.value)}
-                              style={{width: '5rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
+                              style={{width: '5rem', padding: '0.5rem', border: `2px solid ${tempsInputs[joueur.id] && (tempsInputs[joueur.id] < 0 || tempsInputs[joueur.id] > 120) ? '#dc2626' : '#e5e7eb'}`, borderRadius: '0.5rem', fontSize: '0.875rem'}}
                             />
                             <input
                               type="number"
@@ -222,7 +223,7 @@ const CoachView = ({
                               placeholder="Passes D"
                               value={passesInputs[joueur.id] ?? ''}
                               onChange={(e) => handlePassesChange(joueur.id, e.target.value)}
-                              style={{width: '6rem', padding: '0.5rem', border: '2px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem'}}
+                              style={{width: '6rem', padding: '0.5rem', border: `2px solid ${passesInputs[joueur.id] && (passesInputs[joueur.id] < 0 || passesInputs[joueur.id] > 30) ? '#dc2626' : '#e5e7eb'}`, borderRadius: '0.5rem', fontSize: '0.875rem'}}
                             />
                             <button
                               onClick={() => {
@@ -253,14 +254,23 @@ const CoachView = ({
         )}
 
         {view === 'joueurs' && (
-          <JoueursList
-            joueurs={joueursList}
-            notes={notes}
-            convocations={convocations}
-            buteurs={buteurs}
-            tempsDeJeu={tempsDeJeu}
-            passesD={passesD}
-          />
+          <>
+            <PodiumTop3
+              joueurs={joueursList}
+              notes={notes}
+              buteurs={buteurs}
+              tempsDeJeu={tempsDeJeu}
+              passesD={passesD}
+            />
+            <JoueursList
+              joueurs={joueursList}
+              notes={notes}
+              convocations={convocations}
+              buteurs={buteurs}
+              tempsDeJeu={tempsDeJeu}
+              passesD={passesD}
+            />
+          </>
         )}
       </div>
     </div>

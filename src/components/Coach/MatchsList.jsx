@@ -5,9 +5,13 @@ import { getCouleurEquipe } from '../../utils/colors';
 import { getMatchResultat } from '../../utils/matchHelpers';
 
 const MatchsList = ({ matchs, notes, onSelectMatch }) => {
+  // TRI CHRONOLOGIQUE: du plus ANCIEN au plus RÉCENT (ordre temporel normal)
+  // La date est stockée en format ISO dans Firebase
+  const matchsTries = [...matchs].sort((a, b) => new Date(a.date) - new Date(b.date));
+
   return (
     <div style={{display: 'grid', gap: '1rem'}}>
-      {matchs.map(match => {
+      {matchsTries.map(match => {
         const resultat = getMatchResultat(match);
 
         return (
@@ -32,7 +36,7 @@ const MatchsList = ({ matchs, notes, onSelectMatch }) => {
                 </div>
                 <h3 style={{fontWeight: 'bold', fontSize: '1.125rem', color: '#1f2937', margin: 0}}>{match.adversaire}</h3>
                 <p style={{fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem'}}>
-                  {match.domicile === 'true' ? '🏠 Domicile' : '✈️ Extérieur'}
+                  {match.domicile ? '🏠 Domicile' : '✈️ Extérieur'}
                   {match.statut === 'joue' && ` • Score: ${match.scoreEquipe || 0} - ${match.scoreAdversaire || 0}`}
                 </p>
               </div>

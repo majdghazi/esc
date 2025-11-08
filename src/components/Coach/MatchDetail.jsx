@@ -33,7 +33,7 @@ const MatchDetail = ({
           </div>
         )}
         <p style={{color: '#6b7280', marginTop: '0.25rem'}}>
-          {match.domicile === 'true' ? 'Domicile' : 'Extérieur'}
+          {match.domicile ? 'Domicile' : 'Extérieur'}
           {match.statut === 'joue' && ` • Score: ${match.scoreEquipe || 0} - ${match.scoreAdversaire || 0}`}
         </p>
         {user.role === 'coach' && match.statut === 'avenir' && (

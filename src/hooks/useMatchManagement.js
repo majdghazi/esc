@@ -35,7 +35,7 @@ const useMatchManagement = () => {
     const hasNotes = notes.some(n => n.id_match === matchId);
 
     if (hasNotes) {
-      const confirmer = window.confirm('ATTENTION : Ce match a déjà des notes enregistrées. Si vous le repassez en attente, les notes ne seront pas supprimées mais le match redeviendra modifiable. Continuer ?');
+      const confirmer = window.confirm('ATTENTION : Ce match a déjà des notes enregistrées. Si vous le repassez en attente, toutes les données seront supprimées. Continuer ?');
       if (!confirmer) return;
     }
 

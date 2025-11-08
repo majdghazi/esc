@@ -11,7 +11,7 @@ const useNotesJoueurs = () => {
       if (butsValue !== '' && butsValue !== null && butsValue !== undefined) {
         const buts = parseInt(butsValue);
         if (buts >= 0) {
-          newButeurs.push({ id_match: matchId, id_joueur: joueurId, buts: buts });
+          newButeurs.push({ id_match: matchId, id_joueur: joueurId, nombre_de_buts: buts });
         }
       }
       setButeurs(newButeurs);
@@ -62,7 +62,7 @@ const useNotesJoueurs = () => {
         const temps = parseInt(tempsValue);
         if (temps >= 0 && temps <= 120) {
           const newTemps = tempsDeJeu.filter(t => !(t.id_match === selectedMatch && t.id_joueur === joueurId));
-          newTemps.push({ id_match: selectedMatch, id_joueur: joueurId, temps: temps });
+          newTemps.push({ id_match: selectedMatch, id_joueur: joueurId, minutes_jouees: temps });
           setTempsDeJeu(newTemps);
           setTempsInputs({ ...tempsInputs, [joueurId]: '' });
         } else {
@@ -82,7 +82,7 @@ const useNotesJoueurs = () => {
         const passes = parseInt(passesValue);
         if (passes >= 0 && passes <= 30) {
           const newPasses = passesD.filter(p => !(p.id_match === selectedMatch && p.id_joueur === joueurId));
-          newPasses.push({ id_match: selectedMatch, id_joueur: joueurId, passes: passes });
+          newPasses.push({ id_match: selectedMatch, id_joueur: joueurId, nombre_passes_d: passes });
           setPassesD(newPasses);
           setPassesInputs({ ...passesInputs, [joueurId]: '' });
         } else {
