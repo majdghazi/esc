@@ -4,13 +4,13 @@
     "description": "Application de gestion pour l'équipe de football ESC Cappelle Séniors D3 Équipe B",
     "icons": [
       {
-        "src": "/logo_IH.png",
+        "src": "/logonoir_IH.png",
         "sizes": "192x192",
         "type": "image/png",
         "purpose": "any maskable"
       },
       {
-        "src": "/logo_IH.png",
+        "src": "/logonoir_IH.png",
         "sizes": "512x512",
         "type": "image/png",
         "purpose": "any maskable"

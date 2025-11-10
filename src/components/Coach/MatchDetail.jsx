@@ -1,6 +1,5 @@
 import React from 'react';
 import { formaterDate } from '../../utils/dateFormatter';
-import { getNoteEquipe } from '../../utils/noteCalculator';
 import { getCouleurEquipe } from '../../utils/colors';
 
 const MatchDetail = ({ 

@@ -7,5 +7,11 @@ export const getMatchResultat = (match) => {
   };
   
   export const getProchainMatch = (matchs) => {
-    return matchs.find(m => m.statut === 'avenir');
+    // Filtrer les matchs à venir et les trier par date
+    const matchsAvenir = matchs
+      .filter(m => m.statut === 'avenir')
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Retourner le premier (le plus proche)
+    return matchsAvenir[0];
   };

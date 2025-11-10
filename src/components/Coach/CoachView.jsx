@@ -9,11 +9,12 @@ import ConvocationsList from './ConvocationsList';
 import SimpleLineChart from '../Shared/SimpleLineChart';
 import PodiumTop3 from '../Shared/PodiumTop3';
 import { getNoteEquipe } from '../../utils/noteCalculator';
-import { isConvoque, getStatutConvocation, getNote } from '../../utils/convocationHelpers';
+import { isConvoque, getNote } from '../../utils/convocationHelpers';
 import { getButs, getTemps, getPasses } from '../../utils/statsCalculator';
 import { getCouleurNote } from '../../utils/colors';
 import { getTexteNote } from '../../utils/noteCalculator';
 import { getGraphDataEquipe } from '../../utils/noteCalculator';
+import { getProchainMatch } from '../../utils/matchHelpers';
 
 
 
@@ -63,6 +64,18 @@ const CoachView = ({
   const joueursList = joueurs.filter(j => j.role === 'joueur' || j.role === 'gardien');
   const noteEquipe = matchEnCours ? getNoteEquipe(notes, matchEnCours.id) : null;
   const graphDataEquipe = getGraphDataEquipe(notes, matchs);
+  const prochainMatch = getProchainMatch(matchs);
+  // On peut UNIQUEMENT convoquer pour le prochain match non-joué
+  const isNextMatch = matchEnCours?.id === prochainMatch?.id;
+
+  console.log('🔍 DEBUG CONVOCATIONS:', {
+    matchEnCours: matchEnCours?.adversaire,
+    matchEnCoursId: matchEnCours?.id,
+    prochainMatch: prochainMatch?.adversaire,
+    prochainMatchId: prochainMatch?.id,
+    isNextMatch,
+    tousLesMatchs: matchs.map(m => ({ id: m.id, adversaire: m.adversaire, statut: m.statut }))
+  });
   return (
     <div style={{minHeight: '100vh', background: '#f9fafb'}}>
       <CoachHeader user={user} notes={notes} onLogout={onLogout} />
@@ -108,6 +121,7 @@ const CoachView = ({
                 convocations={convocations}
                 onConvoquer={convoquerJoueur}
                 onDeconvoquer={deconvoquerJoueur}
+                isNextMatch={isNextMatch}
               />
             )}
 

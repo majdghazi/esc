@@ -87,6 +87,7 @@ const JoueurView = ({
 
         {(view === 'stats' || !view) && (
           <>
+            {/* Afficher uniquement le prochain match */}
             {prochainMatch && (
               <ProchainMatchCard
                 match={prochainMatch}

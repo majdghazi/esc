@@ -1,6 +1,5 @@
 import React from 'react';
 import { calculerMoyenne } from '../../utils/noteCalculator';
-import { getCouleurEvaluation } from '../../utils/colors';
 
 const EvaluationCoach = ({ 
   coachNom, 

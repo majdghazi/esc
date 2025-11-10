@@ -1,14 +1,15 @@
 import React from 'react';
 import { isConvoque, getStatutConvocation } from '../../utils/convocationHelpers';
 
-const ConvocationsList = ({ 
-  matchId, 
-  joueurs, 
-  convocations, 
-  onConvoquer, 
-  onDeconvoquer 
+const ConvocationsList = ({
+  matchId,
+  joueurs,
+  convocations,
+  onConvoquer,
+  onDeconvoquer,
+  isNextMatch = true
 }) => {
-  const joueursConvoques = joueurs.filter(j => isConvoque(convocations, matchId, j.id)).length;
+  // const joueursConvoques = joueurs.filter(j => isConvoque(convocations, matchId, j.id)).length;
   const joueursEnAttente = joueurs.filter(j => getStatutConvocation(convocations, matchId, j.id) === 'en_attente').length;
   const joueursAcceptes = joueurs.filter(j => getStatutConvocation(convocations, matchId, j.id) === 'accepte').length;
   const joueursRefuses = joueurs.filter(j => getStatutConvocation(convocations, matchId, j.id) === 'refuse').length;
@@ -16,6 +17,13 @@ const ConvocationsList = ({
   return (
     <div style={{marginBottom: '1rem'}}>
       <h3 style={{fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem'}}>Gestion des convocations</h3>
+
+      {!isNextMatch && (
+        <div style={{background: '#fef3c7', border: '2px solid #fbbf24', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem', color: '#92400e'}}>
+          <strong>⚠️ Information :</strong> Vous ne pouvez convoquer que pour le prochain match
+        </div>
+      )}
+
       <div style={{display: 'flex', gap: '1rem', fontSize: '0.875rem', flexWrap: 'wrap', marginBottom: '1rem'}}>
         <span style={{background: '#fff7ed', color: '#9a3412', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontWeight: '600'}}>
           ⏳ En attente: {joueursEnAttente}
@@ -43,8 +51,21 @@ const ConvocationsList = ({
               <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap'}}>
                 {!convoque ? (
                   <button
-                    onClick={() => onConvoquer(matchId, joueur.id)}
-                    style={{padding: '0.625rem 1.25rem', borderRadius: '0.75rem', border: '2px solid #ff8800', cursor: 'pointer', background: '#ff8800', color: 'white', fontWeight: '700', fontSize: '0.875rem', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(255, 136, 0, 0.3)'}}
+                    onClick={isNextMatch ? () => onConvoquer(matchId, joueur.id) : undefined}
+                    disabled={!isNextMatch}
+                    style={{
+                      padding: '0.625rem 1.25rem',
+                      borderRadius: '0.75rem',
+                      border: isNextMatch ? '2px solid #ff8800' : '2px solid #d1d5db',
+                      cursor: isNextMatch ? 'pointer' : 'not-allowed',
+                      background: isNextMatch ? '#ff8800' : '#e5e7eb',
+                      color: isNextMatch ? 'white' : '#9ca3af',
+                      fontWeight: '700',
+                      fontSize: '0.875rem',
+                      transition: 'all 0.2s',
+                      boxShadow: isNextMatch ? '0 2px 4px rgba(255, 136, 0, 0.3)' : 'none',
+                      opacity: isNextMatch ? 1 : 0.6
+                    }}
                   >
                     ✓ Convoquer
                   </button>

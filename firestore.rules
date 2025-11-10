@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function: Check if user is coach
+    function isCoach() {
+      return isAuthenticated() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coach';
+    }
+
+    // Helper function: Check if user is coach adjoint
+    function isCoachAdjoint() {
+      return isAuthenticated() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coach_adjoint';
+    }
+
+    // Helper function: Check if user is player
+    function isJoueur() {
+      return isAuthenticated() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'joueur';
+    }
+
+    // Helper function: Check if user owns this document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // USERS COLLECTION
+    // - Coaches can read all users
+    // - Users can read their own document
+    // - Only authenticated users can create their profile
+    // - Users can update their own profile
+    match /users/{userId} {
+      allow read: if isCoach() || isOwner(userId);
+      allow create: if isAuthenticated();
+      allow update: if isOwner(userId);
+      allow delete: if false; // No one can delete users
+    }
+
+    // MATCHS COLLECTION
+    // - Everyone can read matchs
+    // - Only coaches can create/update/delete matchs
+    match /matchs/{matchId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isCoach();
+    }
+
+    // CONVOCATIONS COLLECTION
+    // - Everyone can read convocations
+    // - Coaches can create/update/delete convocations
+    // - Players can update their own convocation status (accept/refuse)
+    match /convocations/{convocId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isCoach();
+      allow update: if isCoach() ||
+                       (isJoueur() &&
+                        resource.data.id_joueur == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.id);
+    }
+
+    // NOTES COLLECTION
+    // - Everyone can read notes
+    // - Only coaches can create/update/delete notes
+    match /notes/{noteId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isCoach();
+    }
+
+    // STATS COLLECTION (buts, temps de jeu, passes décisives)
+    // - Everyone can read stats
+    // - Only coaches can create/update/delete stats
+    match /stats/{statId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isCoach();
+    }
+
+    // EVALUATIONS COLLECTION
+    // - Everyone can read evaluations
+    // - Players can create/update their own evaluations
+    // - Coaches can read all evaluations
+    match /evaluations/{evalId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isJoueur() &&
+                               resource.data.id_joueur == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.id;
+      allow delete: if false; // No one can delete evaluations
+    }
+  }
+}

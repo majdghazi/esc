@@ -1,11 +1,12 @@
 import React from 'react';
 import { formaterDate } from '../../utils/dateFormatter';
 
-const ProchainMatchCard = ({ 
-  match, 
-  convocation, 
-  onAccepter, 
-  onRefuser 
+const ProchainMatchCard = ({
+  match,
+  convocation,
+  onAccepter,
+  onRefuser,
+  label = '📅 Prochain match' // Label par défaut
 }) => {
   const getCardStyle = () => {
     if (convocation?.statut === 'accepte') {
@@ -23,7 +24,7 @@ const ProchainMatchCard = ({
   return (
     <div style={{...getCardStyle(), padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '1.5rem'}}>
       <div style={{fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', opacity: 0.9}}>
-        📅 Prochain match
+        {label}
       </div>
       <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem'}}>{match.adversaire}</h2>
       <p style={{marginBottom: '1rem', opacity: 0.9}}>
