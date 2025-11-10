@@ -10,28 +10,22 @@ const useConvocations = () => {
       setConvocations(newConvocs);
     };
   
-    const accepterConvocation = (matchId, joueurId, user, convocations, setConvocations, setActionJoueurEnCours) => {
+    const accepterConvocation = (matchId, joueurId, user, convocations, setConvocations) => {
       const newConvocs = convocations.map(c =>
         c.id_match === matchId && c.id_joueur === joueurId
           ? { ...c, statut: 'accepte' }
           : c
       );
       setConvocations(newConvocs);
-      if (user?.role === 'joueur' && user.id === joueurId) {
-        setActionJoueurEnCours(true);
-      }
     };
   
-    const refuserConvocation = (matchId, joueurId, user, convocations, setConvocations, setActionJoueurEnCours) => {
+    const refuserConvocation = (matchId, joueurId, user, convocations, setConvocations) => {
       const newConvocs = convocations.map(c =>
         c.id_match === matchId && c.id_joueur === joueurId
           ? { ...c, statut: 'refuse' }
           : c
       );
       setConvocations(newConvocs);
-      if (user?.role === 'joueur' && user.id === joueurId) {
-        setActionJoueurEnCours(true);
-      }
     };
   
     return {

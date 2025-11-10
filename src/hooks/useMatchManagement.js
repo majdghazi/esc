@@ -31,14 +31,7 @@ const useMatchManagement = () => {
     setMatchToPlay(null);
   };
 
-  const repasserEnAttente = (matchId, matchs, setMatchs, notes) => {
-    const hasNotes = notes.some(n => n.id_match === matchId);
-
-    if (hasNotes) {
-      const confirmer = window.confirm('ATTENTION : Ce match a déjà des notes enregistrées. Si vous le repassez en attente, toutes les données seront supprimées. Continuer ?');
-      if (!confirmer) return;
-    }
-
+  const repasserEnAttente = (matchId, matchs, setMatchs) => {
     const newMatchs = matchs.map(m =>
       m.id === matchId
         ? { ...m, statut: 'avenir', scoreEquipe: 0, scoreAdversaire: 0 }

@@ -28,7 +28,7 @@ function App() {
   // Auth
   const {
     user,
-    setUser,
+    // setUser,
     loginUsername,
     setLoginUsername,
     loginPassword,
@@ -59,9 +59,9 @@ function App() {
     evaluationsCoach,
     setEvaluationsCoach,
     loading,
-    chargerDonnees,
-    actionJoueurEnCours,
-    setActionJoueurEnCours
+    chargerDonnees
+    // actionJoueurEnCours,
+    // setActionJoueurEnCours
   } = useFirestore(user);
 
   // Match Management
@@ -129,6 +129,7 @@ function App() {
   useEffect(() => {
     chargerDonnees();
     loadUserFromStorage();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -136,6 +137,7 @@ function App() {
   // Charger les évaluations du joueur
   useEffect(() => {
     loadEvaluations(user, evaluationsCoach);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, evaluationsCoach]);
 
   // Gestion du login
@@ -215,7 +217,7 @@ function App() {
           convoquerJoueur={(matchId, joueurId) => convoquerJoueur(matchId, joueurId, convocations, setConvocations)}
           deconvoquerJoueur={(matchId, joueurId) => deconvoquerJoueur(matchId, joueurId, convocations, setConvocations)}
           marquerCommeJoue={(matchId) => marquerCommeJoue(matchId, matchs)}
-          repasserEnAttente={(matchId) => repasserEnAttente(matchId, matchs, setMatchs, notes)}
+          repasserEnAttente={(matchId) => repasserEnAttente(matchId, matchs, setMatchs)}
           saveNote={(joueurId) => saveNote(joueurId, selectedMatch, noteInputs, setNoteInputs, notes, setNotes, setEditingNote, showNotification)}
           saveButs={(joueurId) => saveButs(joueurId, selectedMatch, butInputs, setButInputs, buteurs, setButeurs, showNotification)}
           saveTemps={(joueurId) => saveTemps(joueurId, selectedMatch, tempsInputs, setTempsInputs, tempsDeJeu, setTempsDeJeu, showNotification)}
@@ -256,8 +258,8 @@ function App() {
         setEvalIsma={setEvalIsma}
         evalAdam={evalAdam}
         setEvalAdam={setEvalAdam}
-        accepterConvocation={(matchId, joueurId) => accepterConvocation(matchId, joueurId, user, convocations, setConvocations, setActionJoueurEnCours)}
-        refuserConvocation={(matchId, joueurId) => refuserConvocation(matchId, joueurId, user, convocations, setConvocations, setActionJoueurEnCours)}
+        accepterConvocation={(matchId, joueurId) => accepterConvocation(matchId, joueurId, user, convocations, setConvocations)}
+        refuserConvocation={(matchId, joueurId) => refuserConvocation(matchId, joueurId, user, convocations, setConvocations)}
         saveEvaluationIsma={() => saveEvaluationIsma(user, evaluationsCoach, setEvaluationsCoach, showNotification)}
         saveEvaluationAdam={() => saveEvaluationAdam(user, evaluationsCoach, setEvaluationsCoach, showNotification)}
         onLogout={logout}
