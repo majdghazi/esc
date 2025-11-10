@@ -113,6 +113,7 @@ const CoachView = ({
             onMarquerJoue={marquerCommeJoue}
             onRepasserAttente={repasserEnAttente}
             noteEquipe={noteEquipe}
+            isNextMatch={isNextMatch}
           >
             {matchEnCours.statut === 'avenir' && (
               <ConvocationsList

@@ -2,14 +2,15 @@ import React from 'react';
 import { formaterDate } from '../../utils/dateFormatter';
 import { getCouleurEquipe } from '../../utils/colors';
 
-const MatchDetail = ({ 
-  match, 
-  user, 
-  onBack, 
-  onMarquerJoue, 
-  onRepasserAttente, 
-  noteEquipe, 
-  children 
+const MatchDetail = ({
+  match,
+  user,
+  onBack,
+  onMarquerJoue,
+  onRepasserAttente,
+  noteEquipe,
+  isNextMatch = true,
+  children
 }) => {
   return (
     <div style={{background: 'white', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', padding: '1.5rem'}}>
@@ -36,12 +37,31 @@ const MatchDetail = ({
           {match.statut === 'joue' && ` • Score: ${match.scoreEquipe || 0} - ${match.scoreAdversaire || 0}`}
         </p>
         {user.role === 'coach' && match.statut === 'avenir' && (
-          <button
-            onClick={() => onMarquerJoue(match.id)}
-            style={{marginTop: '1rem', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '600'}}
-          >
-            ✓ Marquer comme joué
-          </button>
+          <>
+            {!isNextMatch && (
+              <div style={{background: '#fef3c7', border: '2px solid #fbbf24', padding: '0.75rem', borderRadius: '0.5rem', marginTop: '1rem', fontSize: '0.875rem', color: '#92400e'}}>
+                <strong>⚠️ Information :</strong> Vous devez d'abord marquer le match précédent comme joué
+              </div>
+            )}
+            <button
+              onClick={isNextMatch ? () => onMarquerJoue(match.id) : undefined}
+              disabled={!isNextMatch}
+              style={{
+                marginTop: '1rem',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '0.5rem',
+                background: isNextMatch ? '#10b981' : '#e5e7eb',
+                color: isNextMatch ? 'white' : '#9ca3af',
+                border: 'none',
+                cursor: isNextMatch ? 'pointer' : 'not-allowed',
+                fontSize: '1rem',
+                fontWeight: '600',
+                opacity: isNextMatch ? 1 : 0.6
+              }}
+            >
+              ✓ Marquer comme joué
+            </button>
+          </>
         )}
         {user.role === 'coach' && match.statut === 'joue' && (
           <button
