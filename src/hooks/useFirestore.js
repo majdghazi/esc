@@ -106,6 +106,8 @@ const useFirestore = (user) => {
         ecrireCollection('convocations', convocations); // minuscule
         setActionJoueurEnCours(false);
       }
+    } else if (!isInitialLoad.current && user && convocations.length === 0) {
+      console.error('⚠️ ALERTE: Tentative d\'écriture de convocations vides BLOQUÉE');
     }
   }, [convocations, user, actionJoueurEnCours]);
 
@@ -113,6 +115,8 @@ const useFirestore = (user) => {
   useEffect(() => {
     if (!isInitialLoad.current && user?.role === 'coach' && notes.length > 0) {
       ecrireCollection('notes', notes);
+    } else if (!isInitialLoad.current && user?.role === 'coach' && notes.length === 0) {
+      console.error('⚠️ ALERTE: Tentative d\'écriture de notes vides BLOQUÉE');
     }
   }, [notes, user]);
 
@@ -120,6 +124,8 @@ const useFirestore = (user) => {
   useEffect(() => {
     if (!isInitialLoad.current && (user?.role === 'coach' || user?.role === 'coach_adjoint') && buteurs.length > 0) {
       ecrireCollection('buteurs', buteurs);
+    } else if (!isInitialLoad.current && (user?.role === 'coach' || user?.role === 'coach_adjoint') && buteurs.length === 0) {
+      console.error('⚠️ ALERTE: Tentative d\'écriture de buteurs vides BLOQUÉE');
     }
   }, [buteurs, user]);
 
@@ -127,6 +133,8 @@ const useFirestore = (user) => {
   useEffect(() => {
     if (!isInitialLoad.current && (user?.role === 'coach' || user?.role === 'coach_adjoint') && tempsDeJeu.length > 0) {
       ecrireCollection('temps_de_jeu', tempsDeJeu);
+    } else if (!isInitialLoad.current && (user?.role === 'coach' || user?.role === 'coach_adjoint') && tempsDeJeu.length === 0) {
+      console.error('⚠️ ALERTE: Tentative d\'écriture de temps_de_jeu vides BLOQUÉE');
     }
   }, [tempsDeJeu, user]);
 
@@ -134,6 +142,8 @@ const useFirestore = (user) => {
   useEffect(() => {
     if (!isInitialLoad.current && (user?.role === 'coach' || user?.role === 'coach_adjoint') && passesD.length > 0) {
       ecrireCollection('passes_d', passesD);
+    } else if (!isInitialLoad.current && (user?.role === 'coach' || user?.role === 'coach_adjoint') && passesD.length === 0) {
+      console.error('⚠️ ALERTE: Tentative d\'écriture de passes_d vides BLOQUÉE');
     }
   }, [passesD, user]);
 
@@ -151,6 +161,8 @@ const useFirestore = (user) => {
   useEffect(() => {
     if (!isInitialLoad.current && user?.role === 'joueur' && evaluationsCoach.length > 0) {
       ecrireCollection('evaluations_coach', evaluationsCoach);
+    } else if (!isInitialLoad.current && user?.role === 'joueur' && evaluationsCoach.length === 0) {
+      console.error('⚠️ ALERTE: Tentative d\'écriture de evaluations_coach vides BLOQUÉE');
     }
   }, [evaluationsCoach, user]);
 
