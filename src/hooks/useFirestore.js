@@ -31,28 +31,66 @@ const useFirestore = (user) => {
     }
   };
 
-  // Écrire une collection Firestore (remplacement complet)
+  // Écrire une collection Firestore (SAFE: sync intelligent sans suppression massive)
   const ecrireCollection = async (nomCollection, donnees) => {
     try {
-      // Supprimer tous les documents existants
-      const querySnapshot = await getDocs(collection(db, nomCollection));
-      const deletePromises = [];
-      querySnapshot.forEach((docSnapshot) => {
-        deletePromises.push(deleteDoc(doc(db, nomCollection, docSnapshot.id)));
-      });
-      await Promise.all(deletePromises);
+      console.log(`💾 Sync ${nomCollection}: ${donnees.length} éléments`);
 
-      // Ajouter les nouvelles données
+      // PROTECTION: Ne JAMAIS traiter un tableau vide
+      if (!donnees || donnees.length === 0) {
+        console.error(`⚠️ BLOQUÉ: Tentative d'écriture de ${nomCollection} vide`);
+        return;
+      }
+
+      // Lire les documents existants
+      const querySnapshot = await getDocs(collection(db, nomCollection));
+      const existingDocs = new Map();
+      querySnapshot.forEach((docSnapshot) => {
+        existingDocs.set(docSnapshot.id, docSnapshot.data());
+      });
+
+      // Construire la liste des IDs actuels
+      const newIds = new Set();
       const writePromises = [];
+
+      // Écrire/Mettre à jour les documents
       donnees.forEach((item, index) => {
         const docId = item.id || item.docId || `doc_${index}`;
+        newIds.add(docId);
+
         const docData = { ...item };
         delete docData.docId; // Nettoyer le champ docId avant l'écriture
+
         writePromises.push(setDoc(doc(db, nomCollection, docId), docData));
       });
+
       await Promise.all(writePromises);
+
+      // Supprimer UNIQUEMENT les documents qui ne sont plus dans la nouvelle liste
+      // ET seulement s'il y en a moins de 10% à supprimer (sécurité)
+      const toDelete = [];
+      existingDocs.forEach((_, docId) => {
+        if (!newIds.has(docId)) {
+          toDelete.push(docId);
+        }
+      });
+
+      if (toDelete.length > 0) {
+        const deleteRatio = toDelete.length / existingDocs.size;
+        if (deleteRatio > 0.1) {
+          console.error(`⚠️ SÉCURITÉ: Tentative de suppression de ${(deleteRatio * 100).toFixed(0)}% des docs dans ${nomCollection} - BLOQUÉ`);
+        } else {
+          const deletePromises = toDelete.map(docId =>
+            deleteDoc(doc(db, nomCollection, docId))
+          );
+          await Promise.all(deletePromises);
+          console.log(`🗑️  ${nomCollection}: ${toDelete.length} docs obsolètes supprimés`);
+        }
+      }
+
+      console.log(`✅ ${nomCollection} synchronisé: ${donnees.length} docs`);
     } catch (error) {
-      console.error(`Erreur écriture ${nomCollection}:`, error);
+      console.error(`❌ Erreur écriture ${nomCollection}:`, error);
     }
   };
 
